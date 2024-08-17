@@ -51,6 +51,10 @@ select, input {
     font-size: 20px;
     border-radius: 5px;
 }
+#post_response_text {
+    text-align: center;
+    padding-bottom: 20px;
+}
 
 form {
     display: flex;

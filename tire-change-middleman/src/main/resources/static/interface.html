@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="interface.css">
+    <title>Interface</title>
+</head>
+<body>
+<nav>
+    <img src="images/logo.PNG" class="logo" onclick="navigateTo('avaleht')"/>
+    <div class="flex_container_column">
+        Vehicle Tire Replacement
+    </div>
+</nav>
+
+<div class="register">
+    <img src="images/tires.jpg" id="tire_picture">
+    <div class="register_content">
+        <h3>Book a time</h3>
+        <form id="tire_replacement_book_form">
+            <div>
+                Pick a time
+                <input type="datetime-local" id="maintenance_time" step="3600">
+            </div>
+            <div>
+                Pick car type
+                <select id="car_type_pick">
+                    <option value="car">Car</option>
+                    <option value="truck">Truck</option>
+                </select>
+            </div>
+            <div>
+                Pick a workshop
+                <select id="workshop_pick">
+                    <option value="London">London</option>
+                    <option value="Manchester">Manchester</option>
+                </select>
+            </div>
+        </form>
+        <div>
+            <input type="submit" id="submit_booking" value="Book">
+        </div>
+        <div id="post_response_text"></div>
+    </div>
+</div>
+
+<div class="filters">
+    <h2>Search available times</h2>
+    <form id="tire_workshop_filter_form">
+        <div>
+            Pick starting time
+            <input type="datetime-local" id="free_timeslot_start" step="3600">
+        </div>
+        <div>
+            Pick ending time
+            <input type="datetime-local" id="free_timeslot_end" step="3600">
+        </div>
+        <div>
+            Pick car type
+            <select id="car_type_filter_pick">
+                <option value="any">any</option>
+                <option value="car">Car</option>
+                <option value="truck">Truck</option>
+            </select>
+        </div>
+        <div>
+            Pick a workshop
+            <select id="workshop_filter_pick">
+                <option value="any">any</option>
+                <option value="London">London</option>
+                <option value="Manchester">Manchester</option>
+            </select>
+        </div>
+    </form>
+    <input type="submit" id="submit_filters" value="Search">
+</div>
+
+<table id="results_table">
+    <thead>
+        <tr>
+            <th>Workshop Name</th>
+            <th>Workshop Address</th>
+            <th>Tire Change Time</th>
+            <th>Vehicle Types Serviced</th>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<footer>
+    <h1>Contact</h1>
+    <div class="contact_text">
+        <div>
+            <p>Tallinn head office:</p>
+            <span>Väike-Ameerika, 1, 11415 Tallinn</span>
+            <span>Phone: +372 605 4450</span>
+            <span>Fax: 605 3186</span>
+        </div>
+        <div>
+            <p>Võru branch office:</p>
+            <span>Oja street 7 (visiting address)</span>
+            <span>Phone: +372 605 3330</span>
+            <span>Fax: 605 3155</span>
+        </div>
+    </div>
+</footer>
+
+<script>
+    document.getElementById("submit_booking").addEventListener("click", function() {
+        var beginTime = document.getElementById("maintenance_time").value;
+        var vehicleType = document.getElementById("car_type_pick").value;
+        var workshopName = document.getElementById("workshop_pick").value;
+        var url = "/book";  // Use a specific endpoint for booking
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                beginTime: beginTime,
+                vehicleType: vehicleType,
+                workshopName: workshopName
+            })
+        })
+        .then(response => response.text()) // Read response as text
+        .then(data => {
+            document.getElementById("post_response_text").innerText = data;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    document.getElementById("submit_filters").addEventListener("click", function() {
+    var startTime = document.getElementById("free_timeslot_start").value;
+    var endTime = document.getElementById("free_timeslot_end").value;
+    var vehicleType = document.getElementById("car_type_filter_pick").value;
+    var workshopName = document.getElementById("workshop_filter_pick").value;
+
+    if (!startTime || !endTime || !vehicleType || !workshopName) {
+        alert("Please fill in all the fields before searching.");
+        return;
+    }
+
+    var url = "/filter?beginTime=" + encodeURIComponent(startTime) + "&endTime=" +
+              encodeURIComponent(endTime) + "&vehicleType=" + encodeURIComponent(vehicleType) +
+              "&workshopName=" + encodeURIComponent(workshopName);
+
+    fetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        var tbody = document.querySelector("#results_table tbody");
+        tbody.innerHTML = "";
+
+        data.forEach(item => {
+            var row = `<tr>
+                <td>${item.workshopName}</td>
+                <td>${item.workshopAddress}</td>
+                <td>${item.tireReplacementTime}</td>
+                <td>"cars"</td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+});
+</script>
+</body>
+</html>
