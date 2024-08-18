@@ -2,6 +2,8 @@ package com.example.demo.controllers;
 
 import com.example.demo.models.TireReplacementTimeSlot;
 import com.example.demo.services.TireChangeTimesGetResponseXMLService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,29 +44,35 @@ public class HTTPFrontendRequestController {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
         if (!Objects.equals(workshopName, "any")){
             // Fetching property values within the method
-            String ServerPort = env.getProperty("servers.port." + workshopName);
-            String ServerHost = env.getProperty("servers.host." + workshopName);
-            String ServerGetAddress = env.getProperty("servers.address.get." + workshopName);
-
+            String serverPort = env.getProperty("servers.port." + workshopName);
+            String serverHost = env.getProperty("servers.host." + workshopName);
+            String serverGetAddress = env.getProperty("servers.address.get." + workshopName);
+            String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName);
+            String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName);
 
             // Construct the full URL
-            String url = ServerPort + ServerHost + ServerGetAddress + "?from=" + beginTime + "&until=" + endTime;
+            String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
+            String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
 
-            // Make the HTTP GET request
-            RestTemplate restTemplate = new RestTemplate();
-            String response = restTemplate.getForObject(url, String.class);
+
             if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
-                timeSlots = parseXML(response,workshopName);
+                timeSlots = parseXML(workshopName,urlXML);
 
         }
 
+            if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "JSON")) {// If the format is JSON
+                timeSlots = parseJSON(workshopName,urlJSON);
+            }
 
     }
         return timeSlots;
     }
-    private List<TireReplacementTimeSlot> parseXML(String XMLData, String workshopName){
+    private List<TireReplacementTimeSlot> parseXML(String workshopName, String url){
 
-            List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+        // Make the HTTP GET request
+        RestTemplate restTemplate = new RestTemplate();
+        String XMLData = restTemplate.getForObject(url, String.class);
+        List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
             // Parse the XML response
             try {
                 JAXBContext jaxbContext = JAXBContext.newInstance(TireChangeTimesGetResponseXMLService.class);
@@ -88,5 +96,41 @@ public class HTTPFrontendRequestController {
             return timeSlots;
 
 }
+    private List<TireReplacementTimeSlot> parseJSON(String workshopName, String url) {
+        List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+
+        // Make the HTTP GET request
+        RestTemplate restTemplate = new RestTemplate();
+        String jsonData = restTemplate.getForObject(url, String.class);
+
+        try {
+            // Parse the JSON response
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(jsonData);
+
+            // Iterate through the JSON array and filter available times
+            for (JsonNode node : rootNode) {
+                boolean available = node.get("available").asBoolean();
+                if (available) {
+                    String id = node.get("id").asText();
+                    String time = node.get("time").asText();
+
+                    // Create a new TireReplacementTimeSlot object and add it to the list
+                    TireReplacementTimeSlot timeSlot = new TireReplacementTimeSlot(
+                            workshopName,
+                            env.getProperty("servers.physicalAddress." + workshopName), // Get physical address from properties
+                            id,
+                            time,
+                            env.getProperty("servers.allowedVehicles." + workshopName)
+                    );
+                    timeSlots.add(timeSlot);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return timeSlots;
+    }
 
 }
