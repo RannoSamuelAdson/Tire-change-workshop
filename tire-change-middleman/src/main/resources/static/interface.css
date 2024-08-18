@@ -117,7 +117,9 @@ th, td {
 th{
 background-color: #232121;
 }
-
+#results_table {
+        visibility: hidden;
+        }
 
 
 
@@ -147,8 +149,8 @@ footer {
         display: none;
     }
 }
-@media screen and (max-width: 910px) {
-    
+@media screen and (max-width: 790px) {
+
     #tire_workshop_filter_form{
         flex-direction: column;
     }
@@ -156,7 +158,7 @@ footer {
         margin-block: 15px;
         margin-inline: 7px;
     }
-    #tire_workshop_filter_form select, #tire_workshop_filter_form input {
+    #tire_workshop_filter_form select, #tire_workshop_filter_form input, #submit_filters {
         height: 30px;
         border-radius: 5px;
         width: 275px;
@@ -175,6 +177,7 @@ footer {
         padding: 3px;
         font-size: smaller;
     }
+
     form{
         flex-direction: column;
     }
@@ -182,7 +185,7 @@ footer {
         margin-block: 15px;
         margin-inline: 7px;
     }
-    select, input {
+    select, #submit_booking {
         height: 30px;
         border-radius: 5px;
         width: 275px;

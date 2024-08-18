@@ -34,8 +34,8 @@
             <div>
                 Pick a workshop
                 <select id="workshop_pick">
-                    <option value="London">London</option>
-                    <option value="Manchester">Manchester</option>
+                    <option value="london">London</option>
+                    <option value="manchester">Manchester</option>
                 </select>
             </div>
         </form>
@@ -51,11 +51,11 @@
     <form id="tire_workshop_filter_form">
         <div>
             Pick starting time
-            <input type="datetime-local" id="free_timeslot_start" step="3600">
+            <input type="date" id="free_timeslot_start">
         </div>
         <div>
             Pick ending time
-            <input type="datetime-local" id="free_timeslot_end" step="3600">
+            <input type="date" id="free_timeslot_end">
         </div>
         <div>
             Pick car type
@@ -69,8 +69,8 @@
             Pick a workshop
             <select id="workshop_filter_pick">
                 <option value="any">any</option>
-                <option value="London">London</option>
-                <option value="Manchester">Manchester</option>
+                <option value="london">London</option>
+                <option value="manchester">Manchester</option>
             </select>
         </div>
     </form>
@@ -79,12 +79,12 @@
 
 <table id="results_table">
     <thead>
-        <tr>
-            <th>Workshop Name</th>
-            <th>Workshop Address</th>
-            <th>Tire Change Time</th>
-            <th>Vehicle Types Serviced</th>
-        </tr>
+    <tr>
+        <th>Workshop Name</th>
+        <th>Workshop Address</th>
+        <th>Tire Change Time</th>
+        <th>Vehicle Types Serviced</th>
+    </tr>
     </thead>
     <tbody>
     </tbody>
@@ -140,8 +140,7 @@
     var endTime = document.getElementById("free_timeslot_end").value;
     var vehicleType = document.getElementById("car_type_filter_pick").value;
     var workshopName = document.getElementById("workshop_filter_pick").value;
-
-    if (!startTime || !endTime || !vehicleType || !workshopName) {
+    if (!startTime || !endTime) {
         alert("Please fill in all the fields before searching.");
         return;
     }
@@ -160,13 +159,28 @@
     .then(data => {
         var tbody = document.querySelector("#results_table tbody");
         tbody.innerHTML = "";
-
+        document.getElementById("results_table").style.visibility = "visible"
         data.forEach(item => {
+            // Convert the date string into a JavaScript Date object
+            var date = new Date(item.tireReplacementTime);
+
+            // Format the date and time into a more readable format
+            var formattedDate = date.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            });
+            var formattedTime = date.toLocaleTimeString("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+            console.log(formattedDate);
+            console.log(formattedTime);
             var row = `<tr>
                 <td>${item.workshopName}</td>
                 <td>${item.workshopAddress}</td>
-                <td>${item.tireReplacementTime}</td>
-                <td>"cars"</td>
+                <td>${formattedDate} ${formattedTime}</td>
+                <td>${item.vehicleTypesServiced}</td>
             </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
         });
