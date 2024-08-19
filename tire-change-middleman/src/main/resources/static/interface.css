@@ -51,8 +51,10 @@ select, input {
     font-size: 20px;
     border-radius: 5px;
 }
-#post_response_text {
+#post_response_text, #get_response_text {
     text-align: center;
+    color: white;
+    font-size: 20px;
     padding-bottom: 20px;
 }
 
@@ -111,7 +113,7 @@ th, td {
     padding: 10px;
     text-align: left;
     border: 1px solid #F2CC20;
-    
+
     color: white;
 }
 th{
@@ -130,7 +132,7 @@ footer {
     color: white;
     flex-direction: column;
     display: flex;
-    margin-bottom: auto;
+    margin-top: auto;
     padding-left: 30px;
 
 }

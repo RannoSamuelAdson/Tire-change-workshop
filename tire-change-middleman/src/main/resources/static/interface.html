@@ -75,6 +75,7 @@
         </div>
     </form>
     <input type="submit" id="submit_filters" value="Search">
+    <div id="get_response_text"></div>
 </div>
 
 <table id="results_table">
@@ -146,8 +147,8 @@
     }
 
     var url = "/filter?beginTime=" + encodeURIComponent(startTime) + "&endTime=" +
-              encodeURIComponent(endTime) + "&vehicleType=" + encodeURIComponent(vehicleType) +
-              "&workshopName=" + encodeURIComponent(workshopName);
+              encodeURIComponent(endTime) + "&vehicleTypes=" + encodeURIComponent(vehicleType) +
+              "&workshopPick=" + encodeURIComponent(workshopName);
 
     fetch(url, {
         method: "GET",
@@ -155,36 +156,59 @@
             "Content-Type": "application/x-www-form-urlencoded",
         },
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(response => {
         var tbody = document.querySelector("#results_table tbody");
-        tbody.innerHTML = "";
-        document.getElementById("results_table").style.visibility = "visible"
-        data.forEach(item => {
-            // Convert the date string into a JavaScript Date object
-            var date = new Date(item.tireReplacementTime);
+        var resultsTable = document.getElementById("results_table");
+        var responseText = document.getElementById("get_response_text");
 
-            // Format the date and time into a more readable format
-            var formattedDate = date.toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
+        console.log("Recieved get response with status of " + response.status)
+
+        if (response.status === 200) {
+            return response.json().then(data => {
+                tbody.innerHTML = "";
+                resultsTable.style.visibility = "visible";
+                responseText.innerText = "";
+
+                data.forEach(item => {
+                    // Convert the date string into a JavaScript Date object
+                    var date = new Date(item.tireReplacementTime);
+
+                    // Format the date and time into a more readable format
+                    var formattedDate = date.toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric"
+                    });
+                    var formattedTime = date.toLocaleTimeString("en-GB", {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    });
+                    var row = `<tr>
+                        <td>${item.workshopName}</td>
+                        <td>${item.workshopAddress}</td>
+                        <td>${formattedDate} ${formattedTime}</td>
+                        <td>${item.vehicleTypesServiced}</td>
+                    </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                });
             });
-            var formattedTime = date.toLocaleTimeString("en-GB", {
-                hour: "2-digit",
-                minute: "2-digit"
-            });
-            var row = `<tr>
-                <td>${item.workshopName}</td>
-                <td>${item.workshopAddress}</td>
-                <td>${formattedDate} ${formattedTime}</td>
-                <td>${item.vehicleTypesServiced}</td>
-            </tr>`;
-            tbody.insertAdjacentHTML('beforeend', row);
-        });
+        } else if (response.status === 204) {
+            tbody.innerHTML = ""; // Clear the table
+            resultsTable.style.visibility = "hidden"; // Hide the table
+            responseText.innerText = "No workshops can meet these conditions"; // Show no content message
+        } else {
+            tbody.innerHTML = ""; // Clear the table
+            resultsTable.style.visibility = "hidden"; // Hide the table
+            responseText.innerText = "Something went wrong. Try again."; // Show error message
+        }
     })
     .catch(error => {
         console.error('Error:', error);
+        var resultsTable = document.getElementById("results_table");
+        var responseText = document.getElementById("get_response_text");
+
+        resultsTable.style.visibility = "hidden"; // Hide the table
+        responseText.innerText = "Something went wrong. Try again."; // Show error message
     });
 });
 </script>

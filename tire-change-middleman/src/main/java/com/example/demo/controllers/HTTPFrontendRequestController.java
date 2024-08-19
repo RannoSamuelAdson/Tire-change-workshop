@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,10 +20,7 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @RestController
 public class HTTPFrontendRequestController {
@@ -43,49 +41,71 @@ public class HTTPFrontendRequestController {
     @GetMapping("/filter")
     public ResponseEntity<List<TireReplacementTimeSlot>> handleGetRequest(@RequestParam String beginTime,
                                                           @RequestParam String endTime,
-                                                          @RequestParam String vehicleType,
-                                                          @RequestParam String workshopName) {
+                                                          @RequestParam String vehicleTypes,
+                                                          @RequestParam String workshopPick) {
 
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+        List<String> vehicleTypesList = new ArrayList<>();
 
+        if (vehicleTypes.equals("any"))
+            vehicleTypesList = getListFromEnviromentProperties(env,"servers.allServiceableCarTypes");
 
-        if (!Objects.equals(workshopName, "any")){
+        if (!Objects.equals(workshopPick, "any")){ // If a specific workshop was picked.
             // Fetching property values within the method
-            String serverPort = env.getProperty("servers.port." + workshopName);
-            String serverHost = env.getProperty("servers.host." + workshopName);
-            String serverGetAddress = env.getProperty("servers.address.get." + workshopName);
-            String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName);
-            String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName);
+            String serverPort = env.getProperty("servers.port." + workshopPick);
+            String serverHost = env.getProperty("servers.host." + workshopPick);
+            String serverGetAddress = env.getProperty("servers.address.get." + workshopPick);
+            String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopPick);
+            String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopPick);
             // Construct the full URL for both XML and JSON responses.
             String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
             String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
+            List<String> workshopAllowedVehiclesList = getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopPick);
+            if (!vehicleTypes.equals("any")){
+                vehicleTypesList = new ArrayList<>();
+                vehicleTypesList.add(vehicleTypes);
+            }
 
-
-            timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshopName,endTime));
-        }
-        if (Objects.equals(workshopName, "any")){
+            if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
+                timeSlots.addAll(sendGetRequest(urlXML,urlJSON, workshopPick,endTime));
+    }
+        if (Objects.equals(workshopPick, "any")){
 
             List<String> workshopList = getListFromEnviromentProperties(env,"servers.list");
 
-            for (String workshop: workshopList){
+            for (String workshopName : workshopList) {
                 // Fetching property values within the method
-                String serverPort = env.getProperty("servers.port." + workshop);
-                String serverHost = env.getProperty("servers.host." + workshop);
-                String serverGetAddress = env.getProperty("servers.address.get." + workshop);
-                String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshop);
-                String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshop);
+                String serverPort = env.getProperty("servers.port." + workshopName);
+                String serverHost = env.getProperty("servers.host." + workshopName);
+                String serverGetAddress = env.getProperty("servers.address.get." + workshopName);
+                String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName);
+                String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName);
                 // Construct the full URL for both XML and JSON responses.
                 String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
                 String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
-                timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshop,endTime));
+                List<String> workshopAllowedVehiclesList = getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName);
+
+                if (!vehicleTypes.equals("any")){
+                    vehicleTypesList = new ArrayList<>();
+                    vehicleTypesList.add(vehicleTypes);
+                }
+
+                if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
+                    timeSlots.addAll(sendGetRequest(urlXML, urlJSON, workshopName, endTime));
             }
 
         }
+        if (timeSlots.isEmpty())
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(timeSlots);
+
         return ResponseEntity.ok(timeSlots);
 
     }
+
+
     private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
             timeSlots = parseXML(workshopName,urlXML);
 
@@ -97,6 +117,8 @@ public class HTTPFrontendRequestController {
         return timeSlots;
 
     }
+
+
     private List<TireReplacementTimeSlot> parseXML(String workshopName, String url){
 
         // Make the HTTP GET request
@@ -126,6 +148,8 @@ public class HTTPFrontendRequestController {
             return timeSlots;
 
 }
+
+
     private List<TireReplacementTimeSlot> parseJSON(String workshopName, String url,String endTime) {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
@@ -167,6 +191,8 @@ public class HTTPFrontendRequestController {
 
         return timeSlots;
     }
+
+
     public static boolean isDateBeforeDateTime(String dateStr, String dateTimeStr) {
         // Returns true, if the parameter dateStr refers to a time after that of the dateTimeStr
 
@@ -179,11 +205,29 @@ public class HTTPFrontendRequestController {
         // Compare the LocalDate to the date part of the ZonedDateTime
         return date.isBefore(dateTime.toLocalDate());
     }
+
+
     private static List<String> getListFromEnviromentProperties(Environment env, String ConfProperties){
         // Retrieve the property value as a comma-separated string
         String workShops = env.getProperty(ConfProperties);
         // Convert the comma-separated string to a List
         List<String> propertiesList = Arrays.asList(workShops.split(","));
         return propertiesList;
+    }
+
+
+    public static boolean haveCommonElements(List<String> list1, List<String> list2) {
+        // Convert the first list to a Set for faster lookup
+        Set<String> set = new HashSet<>(list1);
+
+        // Iterate through the second list and check if any element is in the set
+        for (String element : list2) {
+            if (set.contains(element)) {
+                return true; // A common element is found
+            }
+        }
+
+        // No common elements found
+        return false;
     }
 }
