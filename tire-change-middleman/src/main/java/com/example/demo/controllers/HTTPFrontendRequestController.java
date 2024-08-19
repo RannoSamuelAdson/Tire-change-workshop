@@ -17,6 +17,7 @@ import jakarta.xml.bind.Unmarshaller;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -42,6 +43,8 @@ public class HTTPFrontendRequestController {
                                                           @RequestParam String workshopName) {
 
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+
+
         if (!Objects.equals(workshopName, "any")){
             // Fetching property values within the method
             String serverPort = env.getProperty("servers.port." + workshopName);
@@ -49,23 +52,47 @@ public class HTTPFrontendRequestController {
             String serverGetAddress = env.getProperty("servers.address.get." + workshopName);
             String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName);
             String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName);
-
-            // Construct the full URL
+            // Construct the full URL for both XML and JSON responses.
             String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
             String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
 
+            timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshopName));
+        }
+        if (Objects.equals(workshopName, "any")){
+            // Retrieve the property value as a comma-separated string
+            String workShops = env.getProperty("servers.list");
+            // Convert the comma-separated string to a List
+            List<String> workshopList = Arrays.asList(workShops.split(","));
 
-            if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
-                timeSlots = parseXML(workshopName,urlXML);
+            for (String workshop: workshopList){
+                // Fetching property values within the method
+                String serverPort = env.getProperty("servers.port." + workshop);
+                String serverHost = env.getProperty("servers.host." + workshop);
+                String serverGetAddress = env.getProperty("servers.address.get." + workshop);
+                String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshop);
+                String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshop);
+                // Construct the full URL for both XML and JSON responses.
+                String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
+                String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
+                timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshop));
+            }
+
+        }
+        return timeSlots;
+
+    }
+    private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName){
+        List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+        if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
+            timeSlots = parseXML(workshopName,urlXML);
 
         }
 
-            if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "JSON")) {// If the format is JSON
-                timeSlots = parseJSON(workshopName,urlJSON);
-            }
-
-    }
+        if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "JSON")) {// If the format is JSON
+            timeSlots = parseJSON(workshopName,urlJSON);
+        }
         return timeSlots;
+
     }
     private List<TireReplacementTimeSlot> parseXML(String workshopName, String url){
 
