@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,17 +30,18 @@ public class HTTPFrontendRequestController {
     private Environment env;
 
     @PostMapping("/book")
-    public void handlePostRequest(@RequestParam String beginTime,
+    public ResponseEntity<String> handlePostRequest(@RequestParam String beginTime,
                                   @RequestParam String vehicleType,
                                   @RequestParam String workshopName) {
         System.out.println(beginTime);
         System.out.println(vehicleType);
         System.out.println(workshopName);
         // Implement booking logic here
+        return ResponseEntity.ok("Time booked successfully");
     }
 
     @GetMapping("/filter")
-    public List<TireReplacementTimeSlot> handleGetRequest(@RequestParam String beginTime,
+    public ResponseEntity<List<TireReplacementTimeSlot>> handleGetRequest(@RequestParam String beginTime,
                                                           @RequestParam String endTime,
                                                           @RequestParam String vehicleType,
                                                           @RequestParam String workshopName) {
@@ -57,6 +59,7 @@ public class HTTPFrontendRequestController {
             // Construct the full URL for both XML and JSON responses.
             String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
             String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
+
 
             timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshopName,endTime));
         }
@@ -78,7 +81,7 @@ public class HTTPFrontendRequestController {
             }
 
         }
-        return timeSlots;
+        return ResponseEntity.ok(timeSlots);
 
     }
     private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
