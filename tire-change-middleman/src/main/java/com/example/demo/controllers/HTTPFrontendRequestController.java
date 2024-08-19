@@ -14,7 +14,9 @@ import org.springframework.web.client.RestTemplate;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
-
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,13 +58,11 @@ public class HTTPFrontendRequestController {
             String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
             String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
 
-            timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshopName));
+            timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshopName,endTime));
         }
         if (Objects.equals(workshopName, "any")){
-            // Retrieve the property value as a comma-separated string
-            String workShops = env.getProperty("servers.list");
-            // Convert the comma-separated string to a List
-            List<String> workshopList = Arrays.asList(workShops.split(","));
+
+            List<String> workshopList = getListFromEnviromentProperties(env,"servers.list");
 
             for (String workshop: workshopList){
                 // Fetching property values within the method
@@ -74,14 +74,14 @@ public class HTTPFrontendRequestController {
                 // Construct the full URL for both XML and JSON responses.
                 String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
                 String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
-                timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshop));
+                timeSlots.addAll(sendGetRequest(urlXML,urlJSON,workshop,endTime));
             }
 
         }
         return timeSlots;
 
     }
-    private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName){
+    private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
             timeSlots = parseXML(workshopName,urlXML);
@@ -89,7 +89,7 @@ public class HTTPFrontendRequestController {
         }
 
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "JSON")) {// If the format is JSON
-            timeSlots = parseJSON(workshopName,urlJSON);
+            timeSlots = parseJSON(workshopName,urlJSON,endTime);
         }
         return timeSlots;
 
@@ -123,7 +123,7 @@ public class HTTPFrontendRequestController {
             return timeSlots;
 
 }
-    private List<TireReplacementTimeSlot> parseJSON(String workshopName, String url) {
+    private List<TireReplacementTimeSlot> parseJSON(String workshopName, String url,String endTime) {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
         // Make the HTTP GET request
@@ -137,10 +137,15 @@ public class HTTPFrontendRequestController {
 
             // Iterate through the JSON array and filter available times
             for (JsonNode node : rootNode) {
+
                 boolean available = node.get("available").asBoolean();
+
+                String id = node.get("id").asText();
+                String time = node.get("time").asText();
+
+                if (isDateBeforeDateTime(endTime,time)) // Stops the reading when endDate is reached.
+                    break;
                 if (available) {
-                    String id = node.get("id").asText();
-                    String time = node.get("time").asText();
 
                     // Create a new TireReplacementTimeSlot object and add it to the list
                     TireReplacementTimeSlot timeSlot = new TireReplacementTimeSlot(
@@ -159,5 +164,23 @@ public class HTTPFrontendRequestController {
 
         return timeSlots;
     }
+    public static boolean isDateBeforeDateTime(String dateStr, String dateTimeStr) {
+        // Returns true, if the parameter dateStr refers to a time after that of the dateTimeStr
 
+        // Parse the first date string to LocalDate
+        LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+
+        // Parse the second date-time string to ZonedDateTime
+        ZonedDateTime dateTime = ZonedDateTime.parse(dateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+
+        // Compare the LocalDate to the date part of the ZonedDateTime
+        return date.isBefore(dateTime.toLocalDate());
+    }
+    private static List<String> getListFromEnviromentProperties(Environment env, String ConfProperties){
+        // Retrieve the property value as a comma-separated string
+        String workShops = env.getProperty(ConfProperties);
+        // Convert the comma-separated string to a List
+        List<String> propertiesList = Arrays.asList(workShops.split(","));
+        return propertiesList;
+    }
 }
