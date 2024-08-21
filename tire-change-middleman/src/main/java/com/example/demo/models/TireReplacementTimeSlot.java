@@ -1,6 +1,7 @@
 package com.example.demo.models;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 public class TireReplacementTimeSlot {
     private String workshopName;
@@ -23,11 +24,7 @@ public class TireReplacementTimeSlot {
         return tireReplacementTime;
     }
 
-
-    public String getWorkshopName() {
-
-        return workshopName;
-    }
+    public String getWorkshopName() {return workshopName;}
 
     public void setWorkshopName(String workshopName) {
         this.workshopName = workshopName;

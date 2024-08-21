@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,8 +17,8 @@ import org.springframework.web.client.RestTemplate;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
-import java.time.LocalDate;
-import java.time.ZonedDateTime;
+
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.io.StringReader;
 import java.util.*;
@@ -31,12 +32,88 @@ public class HTTPFrontendRequestController {
     public ResponseEntity<String> handlePostRequest(@RequestParam String beginTime,
                                   @RequestParam String vehicleType,
                                   @RequestParam String workshopName) {
-        System.out.println(beginTime);
-        System.out.println(vehicleType);
-        System.out.println(workshopName);
+
+        String serverPort = env.getProperty("servers.port." + workshopName);
+        String serverHost = env.getProperty("servers.host." + workshopName);
+        String serverGetAddress = env.getProperty("servers.address.get." + workshopName);
+        String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName);
+        String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName);
+        // Parse the string into a LocalDateTime object
+        LocalDateTime dateTime = LocalDateTime.parse(beginTime);
+
+        // Extract the date part as a string
+        String beginDate = dateTime.toLocalDate().toString();
+
+        // Add one day to the date part
+        String endDate = dateTime.toLocalDate().plusDays(1).toString();
+
+
+        // Construct the full URL for both XML and JSON responses.
+        String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginDate + "&until=" + endDate;
+        String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginDate;
+
+        // Since get and put requests need Id-s, it is needed to gather the timeslots of the picked day to find the one corresponding to the needed time.
+        List<TireReplacementTimeSlot> pickedDayTimeSlots = sendGetRequest(urlXML,urlJSON,workshopName,endDate);
+        for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots){
+
+            if (areSameMoment(timeSlot.getTireReplacementTimeInUTC().toString(),beginTime)) {
+                if (getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
+                    String response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
+                    return ResponseEntity.ok(response);
+                }
+                if (!getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("This workshop does not service the vehicle type of " +  vehicleType);
+                }
+
+
+            }
+
+        }
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No such available timeslot exists");
         // Implement booking logic here
-        return ResponseEntity.ok("Time booked successfully");
+
     }
+    private static String sendUpdateRequest(String workshopName, String id, Environment env){
+        // Construct the URL based on the properties
+        String serverPort = env.getProperty("servers.port." + workshopName);
+        String serverHost = env.getProperty("servers.host." + workshopName);
+        String serverBookAddress = env.getProperty("servers.address.book." + workshopName);
+        // Construct the full URL for the PUT request
+        String url = serverPort + serverHost + id + "/" + serverBookAddress;
+        String bookMethod = env.getProperty("servers.bookingMethod." + workshopName);
+        RestTemplate restTemplate = new RestTemplate();
+        String bookingResponse = null;
+
+        if (Objects.equals(bookMethod, "PUT")){
+            bookingResponse = restTemplate.exchange(url, HttpMethod.PUT, null, String.class).getBody();
+        }
+        if (Objects.equals(bookMethod, "POST")){
+            bookingResponse = restTemplate.exchange(url, HttpMethod.POST, null, String.class).getBody();
+        }
+
+        return bookingResponse;
+
+    }
+    public static boolean areSameMoment(String offsetDateTimeStr, String localDateTimeStr) {
+        // Return true, if the two Strings refer to the same moment. Otherwise, return false.
+
+        // Parse the first string to LocalDateTime (assumed to be in local system time)
+        LocalDateTime localDateTime = LocalDateTime.parse(localDateTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+        // Parse the second string to OffsetDateTime (UTC time)
+        OffsetDateTime offsetDateTime = OffsetDateTime.parse(offsetDateTimeStr, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
+        // Extract the time zone offset from the OffsetDateTime
+        ZoneOffset offset = offsetDateTime.getOffset();
+
+        // Convert the LocalDateTime to OffsetDateTime with the extracted offset
+        OffsetDateTime localDateTimeWithOffset = localDateTime.atOffset(offset);
+
+        // Compare the two OffsetDateTime objects
+        return localDateTimeWithOffset.equals(offsetDateTime);
+    }
+
+
 
     @GetMapping("/filter")
     public ResponseEntity<List<TireReplacementTimeSlot>> handleGetRequest(@RequestParam String beginTime,
@@ -101,6 +178,8 @@ public class HTTPFrontendRequestController {
         return ResponseEntity.ok(timeSlots);
 
     }
+
+
 
 
     private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
