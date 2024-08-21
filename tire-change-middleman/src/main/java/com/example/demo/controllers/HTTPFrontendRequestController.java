@@ -42,13 +42,14 @@ public class HTTPFrontendRequestController {
         String pageAmount = env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName);
         String pageSkipAmount = env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName);
         // Parse the string into a LocalDateTime object
-        LocalDateTime dateTime = LocalDateTime.parse(beginTime);
+        OffsetDateTime offsetDateTime = OffsetDateTime.parse(beginTime);
+
 
         // Extract the date part as a string
-        String beginDate = dateTime.toLocalDate().toString();
+        String beginDate = offsetDateTime.toLocalDate().toString();
 
         // Add one day to the date part
-        String endDate = dateTime.toLocalDate().plusDays(1).toString();
+        String endDate = offsetDateTime.toLocalDate().plusDays(1).toString();
 
 
         // Construct the full URL for both XML and JSON responses.
@@ -61,7 +62,7 @@ public class HTTPFrontendRequestController {
             String workshopTimezoneOffsetString = (env.getProperty("servers.localTimezoneOffset." + workshopName));
             int workshopTimezoneOffsetInt = Integer.parseInt(Objects.requireNonNull(workshopTimezoneOffsetString));
 
-            if (areSameMoment(timeSlot.getTireReplacementTimeString(workshopTimezoneOffsetInt),beginTime)) {
+            if (areSameMoment(timeSlot.getTireReplacementTime(), beginTime)) {
 
                 if (getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
                     ResponseEntity<String> response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
@@ -84,6 +85,11 @@ public class HTTPFrontendRequestController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No such available timeslot exists");
         // Implement booking logic here
 
+    }
+    public static boolean areSameMoment(String offsetDateTimeStr1, String offsetDateTimeStr2) {
+        OffsetDateTime offsetDateTime1 = OffsetDateTime.parse(offsetDateTimeStr1, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(offsetDateTimeStr2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        return offsetDateTime1.isEqual(offsetDateTime2);
     }
     private static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env){
         // Construct the URL based on the properties
@@ -118,24 +124,6 @@ public class HTTPFrontendRequestController {
 
         return bookingResponse;
 
-    }
-    public static boolean areSameMoment(String offsetDateTimeStr, String localDateTimeStr) {
-        // Return true, if the two Strings refer to the same moment. Otherwise, return false.
-
-        // Parse the first string to LocalDateTime (assumed to be in local system time)
-        LocalDateTime localDateTime = LocalDateTime.parse(localDateTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-
-        // Parse the second string to OffsetDateTime (UTC time)
-        OffsetDateTime offsetDateTime = OffsetDateTime.parse(offsetDateTimeStr, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-        // Extract the time zone offset from the OffsetDateTime
-        ZoneOffset offset = offsetDateTime.getOffset();
-
-        // Convert the LocalDateTime to OffsetDateTime with the extracted offset
-        OffsetDateTime localDateTimeWithOffset = localDateTime.atOffset(offset);
-
-        // Compare the two OffsetDateTime objects
-        return localDateTimeWithOffset.equals(offsetDateTime);
     }
 
 
@@ -250,6 +238,7 @@ public class HTTPFrontendRequestController {
                                 env.getProperty("servers.physicalAddress." + workshopName),
                                 trygetTextContent(timeslotElement, "uuid"),
                                 trygetTextContent(timeslotElement, "time"),
+                                Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
                                 env.getProperty("servers.allowedVehicles." + workshopName)));
                     }
                 }
@@ -291,6 +280,7 @@ public class HTTPFrontendRequestController {
                             env.getProperty("servers.physicalAddress." + workshopName), // Get physical address from properties
                             id,
                             time,
+                            Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
                             env.getProperty("servers.allowedVehicles." + workshopName)
                     );
                     timeSlots.add(timeSlot);
