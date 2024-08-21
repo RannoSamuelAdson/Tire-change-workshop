@@ -2,6 +2,7 @@ package com.example.demo.models;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 
 public class TireReplacementTimeSlot {
     private String workshopName;
@@ -18,10 +19,17 @@ public class TireReplacementTimeSlot {
         this.tireReplacementTime = OffsetDateTime.parse(timeString);
         this.vehicleTypesServiced = vehicleTypesServiced;
     }
-
-
-    public OffsetDateTime getTireReplacementTime() {
+    public OffsetDateTime getTireReplacementTime(){
         return tireReplacementTime;
+    }
+
+    public String getTireReplacementTimeString(int workshopTimeZoneOffset) {
+        // Adjust the offset to UTC+ the parameter
+        OffsetDateTime utcPlus1Time = tireReplacementTime.withOffsetSameInstant(ZoneOffset.ofHours(workshopTimeZoneOffset));
+
+        // Format the time back to a string
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+        return utcPlus1Time.format(formatter);
     }
 
     public String getWorkshopName() {return workshopName;}

@@ -1,13 +1,12 @@
 package com.example.demo.controllers;
 
+import com.example.demo.models.TireChangeBookingRequest;
 import com.example.demo.models.TireReplacementTimeSlot;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -59,11 +58,20 @@ public class HTTPFrontendRequestController {
         // Since get and put requests need Id-s, it is needed to gather the timeslots of the picked day to find the one corresponding to the needed time.
         List<TireReplacementTimeSlot> pickedDayTimeSlots = sendGetRequest(urlXML,urlJSON,workshopName,endDate);
         for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots){
+            String workshopTimezoneOffsetString = (env.getProperty("servers.localTimezoneOffset." + workshopName));
+            int workshopTimezoneOffsetInt = Integer.parseInt(Objects.requireNonNull(workshopTimezoneOffsetString));
 
-            if (areSameMoment(timeSlot.getTireReplacementTime().toString(),beginTime)) {
+            if (areSameMoment(timeSlot.getTireReplacementTimeString(workshopTimezoneOffsetInt),beginTime)) {
+
                 if (getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
-                    String response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
-                    return ResponseEntity.ok(response);
+                    ResponseEntity<String> response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
+                    if (response.getStatusCode().is2xxSuccessful()){
+                        return ResponseEntity.ok("Time booked successfully");
+                    }
+                    if (!response.getStatusCode().is2xxSuccessful()){ // If something went wrong(workshop server errors mainly).
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something went wrong, try again.");
+                    }
+
                 }
                 if (!getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("This workshop does not service the vehicle type of " +  vehicleType);
@@ -77,7 +85,7 @@ public class HTTPFrontendRequestController {
         // Implement booking logic here
 
     }
-    private static String sendUpdateRequest(String workshopName, String id, Environment env){
+    private static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env){
         // Construct the URL based on the properties
         String serverPort = env.getProperty("servers.port." + workshopName);
         String serverHost = env.getProperty("servers.host." + workshopName);
@@ -86,14 +94,27 @@ public class HTTPFrontendRequestController {
         String url = serverPort + serverHost + id + "/" + serverBookAddress;
         String bookMethod = env.getProperty("servers.bookingMethod." + workshopName);
         RestTemplate restTemplate = new RestTemplate();
-        String bookingResponse = null;
+        // Send the request
+        ResponseEntity<String> bookingResponse = null;
 
+
+        // Prepare the request body
+        TireChangeBookingRequest bookingRequestBody = new TireChangeBookingRequest(env.getProperty("servers.contactInformation"));
+        // Set up the headers
+        HttpHeaders headers = new HttpHeaders();
         if (Objects.equals(bookMethod, "PUT")){
-            bookingResponse = restTemplate.exchange(url, HttpMethod.PUT, null, String.class).getBody();
+            headers.setContentType(MediaType.APPLICATION_XML);
+            // Create the request entity with headers and body
+            HttpEntity<TireChangeBookingRequest> requestEntity = new HttpEntity<>(bookingRequestBody, headers);
+            bookingResponse = restTemplate.exchange(url, HttpMethod.PUT, requestEntity, String.class);
         }
         if (Objects.equals(bookMethod, "POST")){
-            bookingResponse = restTemplate.exchange(url, HttpMethod.POST, null, String.class).getBody();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            // Create the request entity with headers and body
+            HttpEntity<TireChangeBookingRequest> requestEntity = new HttpEntity<>(bookingRequestBody, headers);
+            bookingResponse = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
         }
+
 
         return bookingResponse;
 
@@ -220,7 +241,7 @@ public class HTTPFrontendRequestController {
                     DocumentBuilder builder = factory.newDocumentBuilder();
                     Document document = builder.parse(inputStream);// Parsing XML to get it readable for code.
 
-                    NodeList timeslotNodes = document.getElementsByTagName("availableTime");// Separating data by different stations.
+                    NodeList timeslotNodes = document.getElementsByTagName("availableTime");// Separating data by different timeslots.
                     for (int i = 0; i < timeslotNodes.getLength(); i++) {// Convert the parsed data to TireReplacementTimeSlot objects
 
                         Element timeslotElement = (Element) timeslotNodes.item(i);// Get element with index i in a station.
