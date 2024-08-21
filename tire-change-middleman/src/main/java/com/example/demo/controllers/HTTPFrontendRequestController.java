@@ -1,7 +1,6 @@
 package com.example.demo.controllers;
 
 import com.example.demo.models.TireReplacementTimeSlot;
-import com.example.demo.services.TireChangeTimesGetResponseXMLService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,13 +13,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.JAXBException;
-import jakarta.xml.bind.Unmarshaller;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.io.StringReader;
 import java.util.*;
 
 @RestController
@@ -56,7 +60,7 @@ public class HTTPFrontendRequestController {
         List<TireReplacementTimeSlot> pickedDayTimeSlots = sendGetRequest(urlXML,urlJSON,workshopName,endDate);
         for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots){
 
-            if (areSameMoment(timeSlot.getTireReplacementTimeInUTC().toString(),beginTime)) {
+            if (areSameMoment(timeSlot.getTireReplacementTime().toString(),beginTime)) {
                 if (getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
                     String response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
                     return ResponseEntity.ok(response);
@@ -198,33 +202,40 @@ public class HTTPFrontendRequestController {
     }
 
 
-    private List<TireReplacementTimeSlot> parseXML(String workshopName, String url){
+    private List<TireReplacementTimeSlot> parseXML(String workshopName, String urlString)  {
 
         // Make the HTTP GET request
-        RestTemplate restTemplate = new RestTemplate();
-        String XMLData = restTemplate.getForObject(url, String.class);
-        List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
+
+        List<TireReplacementTimeSlot> timeSlotsList = new ArrayList<>();
+
             // Parse the XML response
             try {
-                JAXBContext jaxbContext = JAXBContext.newInstance(TireChangeTimesGetResponseXMLService.class);
-                Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-                TireChangeTimesGetResponseXMLService tireChangeTimesResponse =
-                        (TireChangeTimesGetResponseXMLService) unmarshaller.unmarshal(new StringReader(XMLData));
+                URL getURL = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) getURL.openConnection();
+                connection.setRequestMethod("GET");
+                try (InputStream inputStream = connection.getInputStream()) {
 
-                // Convert the parsed data to TireReplacementTimeSlot objects
-                for (TireChangeTimesGetResponseXMLService.AvailableTime availableTime : tireChangeTimesResponse.getAvailableTimes()) {
-                    timeSlots.add(new TireReplacementTimeSlot(
-                            workshopName,
-                            env.getProperty("servers.physicalAddress." + workshopName), // Get physical address from properties
-                            availableTime.getUuid(),
-                            availableTime.getTime(),
-                            env.getProperty("servers.allowedVehicles." + workshopName)
-                    ));
+
+                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();// Making parser to read XML.
+                    DocumentBuilder builder = factory.newDocumentBuilder();
+                    Document document = builder.parse(inputStream);// Parsing XML to get it readable for code.
+
+                    NodeList timeslotNodes = document.getElementsByTagName("availableTime");// Separating data by different stations.
+                    for (int i = 0; i < timeslotNodes.getLength(); i++) {// Convert the parsed data to TireReplacementTimeSlot objects
+
+                        Element timeslotElement = (Element) timeslotNodes.item(i);// Get element with index i in a station.
+                        timeSlotsList.add(new TireReplacementTimeSlot(
+                                workshopName,
+                                env.getProperty("servers.physicalAddress." + workshopName),
+                                trygetTextContent(timeslotElement, "uuid"),
+                                trygetTextContent(timeslotElement, "time"),
+                                env.getProperty("servers.allowedVehicles." + workshopName)));
+                    }
                 }
-            } catch (JAXBException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-            return timeSlots;
+            return timeSlotsList;
 
 }
 
@@ -309,4 +320,9 @@ public class HTTPFrontendRequestController {
         // No common elements found
         return false;
     }
+    private static String trygetTextContent(Element element, String tagName) {
+        Node node = element.getElementsByTagName(tagName).item(0);
+        return (node != null) ? node.getTextContent() : null;
+    }
+
 }
