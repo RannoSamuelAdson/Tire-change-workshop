@@ -27,15 +27,11 @@
             <div>
                 Pick car type
                 <select id="car_type_pick">
-                    <option value="car">Car</option>
-                    <option value="truck">Truck</option>
                 </select>
             </div>
             <div>
                 Pick a workshop
                 <select id="workshop_pick">
-                    <option value="london">London</option>
-                    <option value="manchester">Manchester</option>
                 </select>
             </div>
         </form>
@@ -61,16 +57,12 @@
             Pick car type
             <select id="car_type_filter_pick">
                 <option value="any">any</option>
-                <option value="car">Car</option>
-                <option value="truck">Truck</option>
             </select>
         </div>
         <div>
             Pick a workshop
             <select id="workshop_filter_pick">
                 <option value="any">any</option>
-                <option value="london">London</option>
-                <option value="manchester">Manchester</option>
             </select>
         </div>
     </form>
@@ -211,6 +203,49 @@
         responseText.innerText = "Something went wrong. Try again."; // Show error message
     });
 });
+    // Function to fetch configuration values and populate the select elements
+function populateOptions() {
+    fetch('/api/config')
+        .then(response => response.json())
+        .then(data => {
+            const serversSelect = document.getElementById('workshop_pick');
+            const carTypesSelect = document.getElementById('car_type_pick');
+            const carTypeFilterSelect = document.getElementById('car_type_filter_pick');
+            const workshopFilterSelect = document.getElementById('workshop_filter_pick');
+
+            // Populate servers
+            data.servers.forEach(server => {
+                const option = document.createElement('option');
+                option.value = server.toLowerCase();
+                option.textContent = server.charAt(0).toUpperCase() + server.slice(1);
+                serversSelect.appendChild(option);
+
+                // Populate workshop filter
+                const filterOption = document.createElement('option');
+                filterOption.value = server.toLowerCase();
+                filterOption.textContent = server.charAt(0).toUpperCase() + server.slice(1);
+                workshopFilterSelect.appendChild(filterOption);
+            });
+
+            // Populate car types
+            data.carTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.toLowerCase();
+                option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                carTypesSelect.appendChild(option);
+
+                // Populate car type filter
+                const filterOption = document.createElement('option');
+                filterOption.value = type.toLowerCase();
+                filterOption.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                carTypeFilterSelect.appendChild(filterOption);
+            });
+        })
+        .catch(error => console.error('Error fetching configuration:', error));
+}
+
+// Call the function to populate options
+document.addEventListener('DOMContentLoaded', populateOptions);
 </script>
 </body>
 </html>
