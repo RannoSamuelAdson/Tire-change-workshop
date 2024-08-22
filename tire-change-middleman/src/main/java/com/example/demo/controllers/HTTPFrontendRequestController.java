@@ -314,6 +314,10 @@ public class HTTPFrontendRequestController {
     public static List<String> getListFromEnviromentProperties(Environment env, String ConfProperties){
         // Retrieve the property value as a comma-separated string
         String workShops = env.getProperty(ConfProperties);
+
+        if (workShops.isEmpty()) // This avoids the potential passing of an empty String as a variable.
+            return new ArrayList<>();
+
         // Convert the comma-separated string to a List
         List<String> propertiesList = Arrays.asList(workShops.split(","));
         return propertiesList;
