@@ -4,6 +4,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class HTTPFrontendRequestControllerTest {
@@ -58,7 +62,30 @@ class HTTPFrontendRequestControllerTest {
     void isDateBeforeOrEqualDateTime() {
     }
 
+
+    //haveCommonElements(List<String> list1, List<String> list2)
+	/*
+	1. (list1 = {truck, car}, list2 = {car}): return true
+	2. (list1 =  {motorcycle}, list2 = {truck, car}): return false
+	3. list1 = {truck}, list2 = {car}: return false
+	*/
+
     @Test
-    void haveCommonElements() {
+    void haveCommonElementsOneCommonElement() {
+        List<String> list1 = Arrays.asList("truck", "car");
+        List<String> list2 = Collections.singletonList("car");
+        assertTrue(HTTPFrontendRequestController.haveCommonElements(list1, list2));
+    }
+    @Test
+    void haveCommonElementsNoCommonElementsLargerList() {
+        List<String> list1 = Arrays.asList("truck", "car");
+        List<String> list2 = Collections.singletonList("motorcycle");
+        assertFalse(HTTPFrontendRequestController.haveCommonElements(list1, list2));
+    }
+    @Test
+    void haveCommonElementsNoCommonElementsSingeltonList() {
+        List<String> list1 = Collections.singletonList("truck");
+        List<String> list2 = Collections.singletonList("car");
+        assertFalse(HTTPFrontendRequestController.haveCommonElements(list1, list2));
     }
 }

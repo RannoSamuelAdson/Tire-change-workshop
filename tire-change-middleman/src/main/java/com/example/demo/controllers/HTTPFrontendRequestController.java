@@ -192,7 +192,7 @@ public class HTTPFrontendRequestController {
 
 
 
-    private List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
+    public List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
@@ -208,7 +208,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    private List<TireReplacementTimeSlot> parseXML(String workshopName, String urlString)  {
+    public List<TireReplacementTimeSlot> parseXML(String workshopName, String urlString)  {
 
         // Make the HTTP GET request
 
@@ -233,8 +233,8 @@ public class HTTPFrontendRequestController {
                         timeSlotsList.add(new TireReplacementTimeSlot(
                                 workshopName,
                                 env.getProperty("servers.physicalAddress." + workshopName),
-                                trygetTextContent(timeslotElement, "uuid"),
-                                trygetTextContent(timeslotElement, "time"),
+                                tryGetTextContent(timeslotElement, "uuid"),
+                                tryGetTextContent(timeslotElement, "time"),
                                 Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
                                 env.getProperty("servers.allowedVehicles." + workshopName)));
                     }
@@ -247,7 +247,7 @@ public class HTTPFrontendRequestController {
 }
 
 
-    private List<TireReplacementTimeSlot> parseJSON(String workshopName, String url,String endTime) {
+    public List<TireReplacementTimeSlot> parseJSON(String workshopName, String url,String endTime) {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
         // Make the HTTP GET request
@@ -311,7 +311,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    private static List<String> getListFromEnviromentProperties(Environment env, String ConfProperties){
+    public static List<String> getListFromEnviromentProperties(Environment env, String ConfProperties){
         // Retrieve the property value as a comma-separated string
         String workShops = env.getProperty(ConfProperties);
         // Convert the comma-separated string to a List
@@ -334,7 +334,7 @@ public class HTTPFrontendRequestController {
         // No common elements found
         return false;
     }
-    private static String trygetTextContent(Element element, String tagName) {
+    public static String tryGetTextContent(Element element, String tagName) {
         Node node = element.getElementsByTagName(tagName).item(0);
         return (node != null) ? node.getTextContent() : null;
     }
