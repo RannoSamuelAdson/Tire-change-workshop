@@ -118,6 +118,11 @@
 
             // Adjust the time to the correct timezone offset
             var offsetInMinutes = timezoneOffset * 60; // Convert hours to minutes
+            if (!localDateTime.getTime()) {
+                alert("Please pick a time slot before booking.");
+                return;
+            }
+
             var adjustedDateTime = new Date(localDateTime.getTime() + offsetInMinutes * 60000);
 
             // Convert to ISO string including timezone offset
@@ -137,16 +142,15 @@
                     workshopName: workshopName
                 })
             })
-            .then(response => response.text()) // Read response as text
-            .then(data => {
-                document.getElementById("post_response_text").innerText = data;
+            .then(response => response.text())  // Convert the response to text
+            .then(text => {
+                // Display the response text in the specified element
+                document.getElementById("post_response_text").innerText = text;
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error:', error.message);
+                document.getElementById("post_response_text").innerText = `Error: ${error.message}`;
             });
-        })
-        .catch(error => {
-            console.error('Error fetching timezone offset:', error);
         });
 });
 

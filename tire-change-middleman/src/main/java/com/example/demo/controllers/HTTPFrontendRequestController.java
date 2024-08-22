@@ -44,13 +44,11 @@ public class HTTPFrontendRequestController {
         // Parse the string into a LocalDateTime object
         OffsetDateTime offsetDateTime = OffsetDateTime.parse(beginTime);
 
-
         // Extract the date part as a string
         String beginDate = offsetDateTime.toLocalDate().toString();
 
         // Add one day to the date part
         String endDate = offsetDateTime.toLocalDate().plusDays(1).toString();
-
 
         // Construct the full URL for both XML and JSON responses.
         String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginDate + "&until=" + endDate;
@@ -59,15 +57,13 @@ public class HTTPFrontendRequestController {
         // Since get and put requests need Id-s, it is needed to gather the timeslots of the picked day to find the one corresponding to the needed time.
         List<TireReplacementTimeSlot> pickedDayTimeSlots = sendGetRequest(urlXML,urlJSON,workshopName,endDate);
         for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots){
-            String workshopTimezoneOffsetString = (env.getProperty("servers.localTimezoneOffset." + workshopName));
-            int workshopTimezoneOffsetInt = Integer.parseInt(Objects.requireNonNull(workshopTimezoneOffsetString));
 
             if (areSameMoment(timeSlot.getTireReplacementTime(), beginTime)) {
 
                 if (getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
                     ResponseEntity<String> response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
                     if (response.getStatusCode().is2xxSuccessful()){
-                        return ResponseEntity.ok("Time booked successfully");
+                        return ResponseEntity.status(HttpStatus.OK).body("Time booked successfully");
                     }
                     if (!response.getStatusCode().is2xxSuccessful()){ // If something went wrong(workshop server errors mainly).
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something went wrong, try again.");
@@ -82,8 +78,7 @@ public class HTTPFrontendRequestController {
             }
 
         }
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No such available timeslot exists");
-        // Implement booking logic here
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No such available timeslot exists");
 
     }
     public static boolean areSameMoment(String offsetDateTimeStr1, String offsetDateTimeStr2) {
@@ -180,6 +175,8 @@ public class HTTPFrontendRequestController {
                     vehicleTypesList.add(vehicleTypes);
                 }
 
+                if (!haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse cannot service the needed vehicle
+                    timeSlots = new ArrayList<>();
                 if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
                     timeSlots.addAll(sendGetRequest(urlXML, urlJSON, workshopName, endTime));
             }
@@ -270,7 +267,7 @@ public class HTTPFrontendRequestController {
                 String id = node.get("id").asText();
                 String time = node.get("time").asText();
 
-                if (isDateBeforeDateTime(endTime,time)) // Stops the reading when endDate is reached.
+                if (isDateBeforeOrEqualDateTime(endTime,time)) // Stops the reading when endTime is reached.
                     break;
                 if (available) {
 
@@ -294,9 +291,15 @@ public class HTTPFrontendRequestController {
     }
 
 
-    public static boolean isDateBeforeDateTime(String dateStr, String dateTimeStr) {
-        // Returns true, if the parameter dateStr refers to a time after that of the dateTimeStr
-
+    /**
+     * Determines if the date from the string dateStr is before or on the same day as
+     * the date part of the dateTimeStr.
+     *
+     * @param dateStr     The string representing the date (e.g., "2024-08-21").
+     * @param dateTimeStr The string representing the date-time (e.g., "2024-08-21T10:15:30+01:00").
+     * @return true if dateStr refers to a time before or on the same day as dateTimeStr, false otherwise.
+     */
+    public static boolean isDateBeforeOrEqualDateTime(String dateStr, String dateTimeStr) {
         // Parse the first date string to LocalDate
         LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
 
@@ -304,7 +307,7 @@ public class HTTPFrontendRequestController {
         ZonedDateTime dateTime = ZonedDateTime.parse(dateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
 
         // Compare the LocalDate to the date part of the ZonedDateTime
-        return date.isBefore(dateTime.toLocalDate());
+        return !date.isAfter(dateTime.toLocalDate());
     }
 
 
