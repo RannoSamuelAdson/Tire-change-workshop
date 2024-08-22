@@ -81,9 +81,9 @@ public class HTTPFrontendRequestController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No such available timeslot exists");
 
     }
-    public static boolean areSameMoment(String offsetDateTimeStr1, String offsetDateTimeStr2) {
-        OffsetDateTime offsetDateTime1 = OffsetDateTime.parse(offsetDateTimeStr1, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-        OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(offsetDateTimeStr2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    public static boolean areSameMoment(String TimeString1, String TimeString2) {
+        OffsetDateTime offsetDateTime1 = OffsetDateTime.parse(TimeString1, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(TimeString2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         return offsetDateTime1.isEqual(offsetDateTime2);
     }
     private static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env){
