@@ -31,6 +31,13 @@ public class HTTPFrontendRequestController {
     @Autowired
     private Environment env;
 
+    public HTTPFrontendRequestController() {
+    }
+
+    public HTTPFrontendRequestController(Environment env) {
+        this.env = env;
+    }
+
     @PostMapping("/book")
     public ResponseEntity<String> handlePostRequest(@RequestParam String beginTime,
                                   @RequestParam String vehicleType,
@@ -55,12 +62,12 @@ public class HTTPFrontendRequestController {
         String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginDate;
 
         // Since get and put requests need Id-s, it is needed to gather the timeslots of the picked day to find the one corresponding to the needed time.
-        List<TireReplacementTimeSlot> pickedDayTimeSlots = sendGetRequest(urlXML,urlJSON,workshopName,endDate);
+        List<TireReplacementTimeSlot> pickedDayTimeSlots = routeGetRequestSending(urlXML,urlJSON,workshopName,endDate);
         for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots){
 
             if (areSameMoment(timeSlot.getTireReplacementTime(), beginTime)) {
 
-                if (getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
+                if (getListFromEnvironmentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
                     ResponseEntity<String> response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
                     if (response.getStatusCode().is2xxSuccessful()){
                         return ResponseEntity.status(HttpStatus.OK).body("Time booked successfully");
@@ -70,7 +77,7 @@ public class HTTPFrontendRequestController {
                     }
 
                 }
-                if (!getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
+                if (!getListFromEnvironmentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("This workshop does not service the vehicle type of " +  vehicleType);
                 }
 
@@ -133,7 +140,7 @@ public class HTTPFrontendRequestController {
         List<String> vehicleTypesList = new ArrayList<>();
 
         if (vehicleTypes.equals("any"))
-            vehicleTypesList = getListFromEnviromentProperties(env,"servers.allServiceableCarTypes");
+            vehicleTypesList = getListFromEnvironmentProperties(env,"servers.allServiceableCarTypes");
 
         if (!Objects.equals(workshopPick, "any")){ // If a specific workshop was picked.
             // Fetching property values within the method
@@ -145,18 +152,18 @@ public class HTTPFrontendRequestController {
             // Construct the full URL for both XML and JSON responses.
             String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
             String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
-            List<String> workshopAllowedVehiclesList = getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopPick);
+            List<String> workshopAllowedVehiclesList = getListFromEnvironmentProperties(env,"servers.allowedVehicles." + workshopPick);
             if (!vehicleTypes.equals("any")){
                 vehicleTypesList = new ArrayList<>();
                 vehicleTypesList.add(vehicleTypes);
             }
 
             if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
-                timeSlots.addAll(sendGetRequest(urlXML,urlJSON, workshopPick,endTime));
+                timeSlots.addAll(routeGetRequestSending(urlXML,urlJSON, workshopPick,endTime));
     }
         if (Objects.equals(workshopPick, "any")){
 
-            List<String> workshopList = getListFromEnviromentProperties(env,"servers.list");
+            List<String> workshopList = getListFromEnvironmentProperties(env,"servers.list");
 
             for (String workshopName : workshopList) {
                 // Fetching property values within the method
@@ -168,7 +175,7 @@ public class HTTPFrontendRequestController {
                 // Construct the full URL for both XML and JSON responses.
                 String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
                 String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
-                List<String> workshopAllowedVehiclesList = getListFromEnviromentProperties(env,"servers.allowedVehicles." + workshopName);
+                List<String> workshopAllowedVehiclesList = getListFromEnvironmentProperties(env,"servers.allowedVehicles." + workshopName);
 
                 if (!vehicleTypes.equals("any")){
                     vehicleTypesList = new ArrayList<>();
@@ -178,7 +185,7 @@ public class HTTPFrontendRequestController {
                 if (!haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse cannot service the needed vehicle
                     timeSlots = new ArrayList<>();
                 if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
-                    timeSlots.addAll(sendGetRequest(urlXML, urlJSON, workshopName, endTime));
+                    timeSlots.addAll(routeGetRequestSending(urlXML, urlJSON, workshopName, endTime));
             }
 
         }
@@ -192,23 +199,23 @@ public class HTTPFrontendRequestController {
 
 
 
-    public List<TireReplacementTimeSlot> sendGetRequest(String urlXML, String urlJSON, String workshopName,String endTime){
+    public List<TireReplacementTimeSlot> routeGetRequestSending(String urlXML, String urlJSON, String workshopName, String endTime){
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
-
+        System.out.println("test");
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
-            timeSlots = parseXML(workshopName,urlXML);
+            timeSlots = sendGetRequestXML(workshopName,urlXML);
 
         }
 
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "JSON")) {// If the format is JSON
-            timeSlots = parseJSON(workshopName,urlJSON,endTime);
+            timeSlots = sendGetRequestJSON(workshopName,urlJSON,endTime);
         }
         return timeSlots;
 
     }
 
 
-    public List<TireReplacementTimeSlot> parseXML(String workshopName, String urlString)  {
+    public List<TireReplacementTimeSlot> sendGetRequestXML(String workshopName, String urlString)  {
 
         // Make the HTTP GET request
 
@@ -247,7 +254,7 @@ public class HTTPFrontendRequestController {
 }
 
 
-    public List<TireReplacementTimeSlot> parseJSON(String workshopName, String url,String endTime) {
+    public List<TireReplacementTimeSlot> sendGetRequestJSON(String workshopName, String url, String endTime) {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
         // Make the HTTP GET request
@@ -311,7 +318,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    public static List<String> getListFromEnviromentProperties(Environment env, String ConfProperties){
+    public static List<String> getListFromEnvironmentProperties(Environment env, String ConfProperties){
         // Retrieve the property value as a comma-separated string
         String workShops = env.getProperty(ConfProperties);
 

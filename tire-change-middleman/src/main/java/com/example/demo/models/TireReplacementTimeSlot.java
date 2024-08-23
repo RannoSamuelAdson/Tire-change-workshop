@@ -12,7 +12,12 @@ public class TireReplacementTimeSlot {
     private String tireReplacementTime;
     private String vehicleTypesServiced;
 
-    // Constructor without Environment parameter
+    // Empty constructor for testing purposes.
+    public TireReplacementTimeSlot() {
+
+    }
+
+    // Standard constructor.
     public TireReplacementTimeSlot(String workshopName, String workshopAddress, String id, String timeString, int localTimeOffsetInt, String vehicleTypesServiced) {
         this.workshopName = workshopName;
         this.workshopAddress = workshopAddress;
