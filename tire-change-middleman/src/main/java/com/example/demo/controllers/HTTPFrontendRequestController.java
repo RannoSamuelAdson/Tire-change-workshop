@@ -40,8 +40,8 @@ public class HTTPFrontendRequestController {
 
     @PostMapping("/book")
     public ResponseEntity<String> handlePostRequest(@RequestParam String beginTime,
-                                  @RequestParam String vehicleType,
-                                  @RequestParam String workshopName) {
+                                                    @RequestParam String vehicleType,
+                                                    @RequestParam String workshopName) {
 
         String serverPort = env.getProperty("servers.port." + workshopName);
         String serverHost = env.getProperty("servers.host." + workshopName);
@@ -132,9 +132,9 @@ public class HTTPFrontendRequestController {
 
     @GetMapping("/filter")
     public ResponseEntity<List<TireReplacementTimeSlot>> handleGetRequest(@RequestParam String beginTime,
-                                                          @RequestParam String endTime,
-                                                          @RequestParam String vehicleTypes,
-                                                          @RequestParam String workshopPick) {
+                                                                          @RequestParam String endTime,
+                                                                          @RequestParam String vehicleTypes,
+                                                                          @RequestParam String workshopPick) {
 
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
         List<String> vehicleTypesList = new ArrayList<>();
@@ -160,7 +160,7 @@ public class HTTPFrontendRequestController {
 
             if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
                 timeSlots.addAll(routeGetRequestSending(urlXML,urlJSON, workshopPick,endTime));
-    }
+        }
         if (Objects.equals(workshopPick, "any")){
 
             List<String> workshopList = getListFromEnvironmentProperties(env,"servers.list");
@@ -221,52 +221,52 @@ public class HTTPFrontendRequestController {
 
         List<TireReplacementTimeSlot> timeSlotsList = new ArrayList<>();
 
-            // Parse the XML response
-            try {
-                URL getURL = new URL(urlString);
-                HttpURLConnection connection = (HttpURLConnection) getURL.openConnection();
-                connection.setRequestMethod("GET");
-                try (InputStream inputStream = connection.getInputStream()) {
+        // Parse the XML response
+        try {
+            URL getURL = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) getURL.openConnection();
+            connection.setRequestMethod("GET");
+            try (InputStream inputStream = connection.getInputStream()) {
 
 
-                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();// Making parser to read XML.
-                    DocumentBuilder builder = factory.newDocumentBuilder();
-                    Document document = builder.parse(inputStream);// Parsing XML to get it readable for code.
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();// Making parser to read XML.
+                DocumentBuilder builder = factory.newDocumentBuilder();
+                Document document = builder.parse(inputStream);// Parsing XML to get it readable for code.
 
-                    NodeList timeslotNodes = document.getElementsByTagName("availableTime");// Separating data by different timeslots.
-                    for (int i = 0; i < timeslotNodes.getLength(); i++) {// Convert the parsed data to TireReplacementTimeSlot objects
+                NodeList timeslotNodes = document.getElementsByTagName("availableTime");// Separating data by different timeslots.
+                for (int i = 0; i < timeslotNodes.getLength(); i++) {// Convert the parsed data to TireReplacementTimeSlot objects
 
-                        Element timeslotElement = (Element) timeslotNodes.item(i);// Get element with index i in a station.
-                        timeSlotsList.add(new TireReplacementTimeSlot(
-                                workshopName,
-                                env.getProperty("servers.physicalAddress." + workshopName),
-                                tryGetTextContent(timeslotElement, "uuid"),
-                                tryGetTextContent(timeslotElement, "time"),
-                                Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
-                                env.getProperty("servers.allowedVehicles." + workshopName)));
-                    }
+                    Element timeslotElement = (Element) timeslotNodes.item(i);// Get element with index i in a station.
+                    timeSlotsList.add(new TireReplacementTimeSlot(
+                            workshopName,
+                            env.getProperty("servers.physicalAddress." + workshopName),
+                            tryGetTextContent(timeslotElement, "uuid"),
+                            tryGetTextContent(timeslotElement, "time"),
+                            Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
+                            env.getProperty("servers.allowedVehicles." + workshopName)));
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-            return timeSlotsList;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return timeSlotsList;
 
-}
+    }
 
 
     public List<TireReplacementTimeSlot> sendGetRequestJSON(String workshopName, String url, String endTime) {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
-        // Make the HTTP GET request
+        // Make the HTTP GET request.
         RestTemplate restTemplate = new RestTemplate();
         String jsonData = restTemplate.getForObject(url, String.class);
 
         try {
-            // Parse the JSON response
+            // Parse the JSON response.
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(jsonData);
 
-            // Iterate through the JSON array and filter available times
+            // Iterate through the JSON array and filter available times.
             for (JsonNode node : rootNode) {
 
                 boolean available = node.get("available").asBoolean();

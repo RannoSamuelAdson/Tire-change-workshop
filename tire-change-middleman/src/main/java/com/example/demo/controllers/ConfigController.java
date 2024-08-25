@@ -28,18 +28,22 @@ public class ConfigController {
     private ObjectMapper objectMapper; // Injecting ObjectMapper
 
     @GetMapping("/config")
-    public Map<String, Object> getConfig() throws IOException {
+    public Map<String, List<String>> getConfig() throws IOException {
         String serversList = env.getProperty("servers.list");
-        String allServiceableCarTypes = env.getProperty("servers.allServiceableCarTypes");
-
-        List<String> servers = Arrays.asList(serversList.split(","));
-        List<String> carTypes = Arrays.asList(allServiceableCarTypes.split(","));
+        String allServiceableVehicleTypes = env.getProperty("servers.allServiceableCarTypes");
 
 
-        return Map.of(
+        List<String> servers = HTTPFrontendRequestController.getListFromEnvironmentProperties(env,serversList);
+        List<String> carTypes = HTTPFrontendRequestController.getListFromEnvironmentProperties(env,allServiceableVehicleTypes);
+
+        HashMap<String,List<String>> responseMap = new HashMap<>();
+        responseMap.put("servers", servers);
+        responseMap.put("carTypes", carTypes);
+        return responseMap;
+        /*return Map.of(
                 "servers", servers,
                 "carTypes", carTypes
-        );
+        );*/
     }
     @GetMapping("/timezone-offset")
     public ResponseEntity<Map<String, Integer>> getTimezoneOffset(@RequestParam String workshop) {
@@ -51,8 +55,7 @@ public class ConfigController {
             Map<String, Integer> response = new HashMap<>();
             response.put("timezoneOffset", offset);
             return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 }
