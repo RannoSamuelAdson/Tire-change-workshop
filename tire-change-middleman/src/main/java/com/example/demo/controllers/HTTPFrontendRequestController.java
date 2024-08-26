@@ -93,7 +93,7 @@ public class HTTPFrontendRequestController {
         OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(TimeString2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         return offsetDateTime1.isEqual(offsetDateTime2);
     }
-    static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env){
+    static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env) {
         // Construct the URL based on the properties
         String serverPort = env.getProperty("servers.port." + workshopName);
         String serverHost = env.getProperty("servers.host." + workshopName);
@@ -102,29 +102,29 @@ public class HTTPFrontendRequestController {
         String url = serverPort + serverHost + id + "/" + serverBookAddress;
         String bookMethod = env.getProperty("servers.bookingMethod." + workshopName);
         RestTemplate restTemplate = new RestTemplate();
-        // Send the request
-        ResponseEntity<String> bookingResponse = null;
-
+        ResponseEntity<String> bookingResponse = new ResponseEntity<>(HttpStatus.OK);
 
         // Prepare the request body
         TireChangeBookingRequest bookingRequestBody = new TireChangeBookingRequest(env.getProperty("servers.contactInformation"));
-        // Set up the headers
         HttpHeaders headers = new HttpHeaders();
-        if (Objects.equals(bookMethod, "PUT")){
+        HttpHeaders updatedHeaders = new HttpHeaders();
+
+        if (Objects.equals(bookMethod, "PUT")) {
             headers.setContentType(MediaType.APPLICATION_XML);
-            // Create the request entity with headers and body
             HttpEntity<TireChangeBookingRequest> requestEntity = new HttpEntity<>(bookingRequestBody, headers);
             bookingResponse = restTemplate.exchange(url, HttpMethod.PUT, requestEntity, String.class);
+            updatedHeaders.putAll(bookingResponse.getHeaders());
+            updatedHeaders.add("X-Put-Method-Executed", "true"); // Adding a flag for tests to check.
         }
-        if (Objects.equals(bookMethod, "POST")){
+        if (Objects.equals(bookMethod, "POST")) {
             headers.setContentType(MediaType.APPLICATION_JSON);
-            // Create the request entity with headers and body
             HttpEntity<TireChangeBookingRequest> requestEntity = new HttpEntity<>(bookingRequestBody, headers);
             bookingResponse = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            updatedHeaders.putAll(bookingResponse.getHeaders());
+            updatedHeaders.add("X-Post-Method-Executed", "true"); // Adding a flag for tests to check.
         }
 
-
-        return bookingResponse;
+        return new ResponseEntity<>(bookingResponse.getBody(), updatedHeaders, bookingResponse.getStatusCode());
 
     }
 
