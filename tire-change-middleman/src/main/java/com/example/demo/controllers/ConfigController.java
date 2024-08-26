@@ -28,29 +28,25 @@ public class ConfigController {
     private ObjectMapper objectMapper; // Injecting ObjectMapper
 
     @GetMapping("/config")
-    public Map<String, List<String>> getConfig() throws IOException {
+    public Map<String, Object> getConfig() throws IOException {
         String serversList = env.getProperty("servers.list");
-        String allServiceableVehicleTypes = env.getProperty("servers.allServiceableCarTypes");
+        String allServiceableCarTypes = env.getProperty("servers.allServiceableCarTypes");
+
+        List<String> servers = Arrays.asList(serversList.split(","));
+        List<String> carTypes = Arrays.asList(allServiceableCarTypes.split(","));
 
 
-        List<String> servers = HTTPFrontendRequestController.getListFromEnvironmentProperties(env,serversList);
-        List<String> carTypes = HTTPFrontendRequestController.getListFromEnvironmentProperties(env,allServiceableVehicleTypes);
-
-        HashMap<String,List<String>> responseMap = new HashMap<>();
-        responseMap.put("servers", servers);
-        responseMap.put("carTypes", carTypes);
-        return responseMap;
-        /*return Map.of(
+        return Map.of(
                 "servers", servers,
                 "carTypes", carTypes
-        );*/
+        );
     }
     @GetMapping("/timezone-offset")
     public ResponseEntity<Map<String, Integer>> getTimezoneOffset(@RequestParam String workshop) {
         String propertyKey = "servers.localTimezoneOffset." + workshop;
         String offsetStr = env.getProperty(propertyKey);
 
-        if (offsetStr != null) {
+        if (!offsetStr.isEmpty()) {
             int offset = Integer.parseInt(offsetStr);
             Map<String, Integer> response = new HashMap<>();
             response.put("timezoneOffset", offset);
