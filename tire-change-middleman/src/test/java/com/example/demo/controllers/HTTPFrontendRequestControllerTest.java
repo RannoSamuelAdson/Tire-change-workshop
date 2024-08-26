@@ -6,11 +6,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.Document;
@@ -19,10 +23,7 @@ import org.w3c.dom.Element;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -43,25 +44,7 @@ class HTTPFrontendRequestControllerTest {
     @AfterEach
     void tearDown() {
     }
-    private void setupServerProperties() {
-        // This is a helper method, that configures some of the behaviour of Environment env.
-        // It also configures "getListFromEnvironmentProperties" method, for it directly interacts with env.
 
-
-        // Setup for london variables.
-        when(env.getProperty("servers.port.london")).thenReturn("http://localhost:9003/");
-        when(env.getProperty("servers.host.london")).thenReturn("api/v1/tire-change-times/");
-        when(env.getProperty("servers.address.get.london")).thenReturn("available");
-        when(env.getProperty("servers.getQuery.responseElements.pageAmount.london")).thenReturn("1000");
-        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.london")).thenReturn("0");
-
-        // Setup for manchester variables.
-        when(env.getProperty("servers.port.manchester")).thenReturn("http://localhost:9004/");
-        when(env.getProperty("servers.host.manchester")).thenReturn("api/v2/tire-change-times/");
-        when(env.getProperty("servers.address.get.manchester")).thenReturn("");
-        when(env.getProperty("servers.getQuery.responseElements.pageAmount.manchester")).thenReturn("1000");
-        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.manchester")).thenReturn("0");
-    }
 
     private boolean listsContainSameElements(List<String> list1, List<String> list2) {
         if (list1 == null || list2 == null) {
@@ -103,6 +86,37 @@ class HTTPFrontendRequestControllerTest {
         String dateTimeStr2 = "2023-08-21T13:30:00+00:00";
         assertFalse(HTTPFrontendRequestController.areSameMoment(dateTimeStr1, dateTimeStr2), "Expected the two times to be considered different moments");
     }
+
+
+
+    @Test
+    void test_sendUpdateRequest_withPutMethod() {
+        // Arrange
+        String workshopName = "london";
+        when(env.getProperty("servers.contactInformation")).thenReturn("Tires Global");
+        when(env.getProperty("servers.port." + workshopName)).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host." + workshopName)).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.book." + workshopName)).thenReturn("booking");
+        when(env.getProperty("servers.bookingMethod." + workshopName)).thenReturn("PUT");
+        when(env.getProperty("servers.address.get." + workshopName)).thenReturn("available");
+        when(env.getProperty("servers.physicalAddress." + workshopName)).thenReturn("1A Gunton Rd, London");
+        when(env.getProperty("servers.allowedVehicles." + workshopName)).thenReturn("car");
+        when(env.getProperty("servers.localTimezoneOffset." + workshopName)).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat." + workshopName)).thenReturn("XML");
+        ResponseEntity<List<TireReplacementTimeSlot>> getResponse = controller.handleGetRequest("2024-08-21","2030-08-21","car",workshopName);
+        TireReplacementTimeSlot exampleTimeSlot = Objects.requireNonNull(getResponse.getBody()).getFirst();
+        String id = exampleTimeSlot.getId();
+
+        // Act
+        ResponseEntity<String> response = controller.sendUpdateRequest(workshopName, id, env);
+
+        // Assert
+        ArgumentCaptor<HttpMethod> methodCaptor = ArgumentCaptor.forClass(HttpMethod.class);
+        assertEquals(HttpMethod.PUT, methodCaptor.getValue());
+        assertTrue(response != null);
+    }
+
+
     //routeGetRequestSending(String urlXML, String urlJSON, String workshopName, String endTime)
 	/*
 	1. (urlXML = (random url), urlJSON = (random url), workshopName = (random name), endTime = (random date)): return {new TireReplacementTimeSlot}
@@ -170,68 +184,191 @@ class HTTPFrontendRequestControllerTest {
 
     @Test
     void test_handleGetRequest_AnyWorkshopAnyVehicle() {
-        String beginTime = "2023-08-21T12:30:00+00:00";
-        String endTime = "2023-09-21T14:30:00+00:00";
+        String beginTime = "2006-08-21";
+        String endTime = "2030-09-21";
         String vehicleTypes = "any";
         String workshopPick = "any";
-        String urlXML = "http://localhost:9003/api/v1/tire-change-times/available?from=2024-08-21&until=2024-08-31";
-        String urlJSON = "http://localhost:9004/api/v2/tire-change-times?amount=1500&page=0&from=2006-01-02";
-
-        HTTPFrontendRequestController controllerSpy = spy(controller);
-
-        setupServerProperties(); // Configures the env to return properties for url creation.
 
 
+        // Configuring the env to return added specific values.
+        when(env.getProperty("servers.list")).thenReturn("london,manchester");
+        when(env.getProperty("servers.allServiceableCarTypes")).thenReturn("car,truck");
+        // Setup for London server properties
+        when(env.getProperty("servers.port.london")).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host.london")).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.get.london")).thenReturn("available");
+        when(env.getProperty("servers.localTimezoneOffset.london")).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat.london")).thenReturn("XML");
+        when(env.getProperty("servers.physicalAddress.london")).thenReturn("1A Gunton Rd, London");
+        when(env.getProperty("servers.allowedVehicles.london")).thenReturn("car");
+
+        // Values that are needed for mocking, but are otherwise irrelevant
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount.london")).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.london")).thenReturn("0");
 
 
+        // Setup for Manchester server properties
+        when(env.getProperty("servers.port.manchester")).thenReturn("http://localhost:9004/");
+        when(env.getProperty("servers.host.manchester")).thenReturn("api/v2/tire-change-times/");
+        when(env.getProperty("servers.address.get.manchester")).thenReturn("");
+        when(env.getProperty("servers.physicalAddress.manchester")).thenReturn("14 Bury New Rd, Manchester");
+        when(env.getProperty("servers.allowedVehicles.manchester")).thenReturn("car,truck");
+        when(env.getProperty("servers.localTimezoneOffset.manchester")).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat.manchester")).thenReturn("JSON");
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount.manchester")).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.manchester")).thenReturn("0");
 
 
-        try (MockedStatic<HTTPFrontendRequestController> mockedStatic = mockStatic(HTTPFrontendRequestController.class)) {
-            doReturn(Arrays.asList(
-                    new TireReplacementTimeSlot("london","address is irrelevant","1","2023-08-22T15:00:00Z",1,"car,truck"),
-                    new TireReplacementTimeSlot("london","address is irrelevant","1","2023-08-22T16:00:00Z",1,"car,truck")
-            )).when(controllerSpy).routeGetRequestSending(urlXML, urlJSON, "london", "2023-08-21");
+        // Act
+        ResponseEntity<List<TireReplacementTimeSlot>> response = controller.handleGetRequest(beginTime, endTime, vehicleTypes, workshopPick);
 
-            doReturn(List.of(
-                    new TireReplacementTimeSlot("manchester", "address is irrelevant", "b58dbb55-8ea4-484b-917e-abade9c3da1a", "2023-08-22T15:00:00Z", 1, "truck")
-            )).when(controllerSpy).routeGetRequestSending(urlXML, urlJSON, "manchester", "2023-08-21");
-                // Mock the static method getListFromEnvironmentProperties for different properties
-                mockedStatic.when(() -> HTTPFrontendRequestController.getListFromEnvironmentProperties(env, "servers.allServiceableCarTypes"))
-                        .thenReturn(Arrays.asList("car", "truck"));
 
-                mockedStatic.when(() -> HTTPFrontendRequestController.getListFromEnvironmentProperties(env, "servers.allowedVehicles.london"))
-                        .thenReturn(Arrays.asList("car", "truck"));
+        // Optionally, you can also assert the response to check if it has the expected data
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
 
-                mockedStatic.when(() -> HTTPFrontendRequestController.getListFromEnvironmentProperties(env, "servers.allowedVehicles.manchester"))
-                        .thenReturn(List.of("truck"));
+        // Check if there are elements with "workshopName" values of "london" and "manchester"
+        List<TireReplacementTimeSlot> timeSlots = response.getBody();
+        assertNotNull(timeSlots);
 
-            // If the lists in the parameters contain identical elements to these, then this engages.
-            when(HTTPFrontendRequestController.haveCommonElements(
-                    argThat(list -> listsContainSameElements(list, Arrays.asList("car","truck"))),
-                    argThat(list -> listsContainSameElements(list, Arrays.asList("car")))
-            )).thenReturn(true);
+        boolean hasLondon = timeSlots.stream().anyMatch(slot -> "london".equals(slot.getWorkshopName()));
+        boolean hasManchester = timeSlots.stream().anyMatch(slot -> "manchester".equals(slot.getWorkshopName()));
+        boolean hasCarVehicle = timeSlots.stream().anyMatch(slot -> "car".equals(slot.getVehicleTypesServiced()));
+        boolean hasCarAndTruckVehicle = timeSlots.stream().anyMatch(slot -> "car,truck".equals(slot.getVehicleTypesServiced()));
 
-            when(HTTPFrontendRequestController.haveCommonElements(
-                    argThat(list -> listsContainSameElements(list, Arrays.asList("car","truck"))),
-                    argThat(list -> listsContainSameElements(list, Arrays.asList("car","truck")))
-            )).thenReturn(true);
+        assertTrue(hasLondon, "Expected a time slot with workshopName 'london'");
+        assertTrue(hasManchester, "Expected a time slot with workshopName 'manchester'");
+        assertTrue(hasCarVehicle, "Expected a time slot with only 'car' being serviced");
+        assertTrue(hasCarAndTruckVehicle, "Expected a time slot with 'car' and 'truck' being serviced");
 
-        ResponseEntity<List<TireReplacementTimeSlot>> response = controllerSpy.handleGetRequest(beginTime,endTime,vehicleTypes,workshopPick);
-        }
 
-    }
-    /*@Test
-    void test_handleGetRequest() {
     }
     @Test
-    void test_handleGetRequest() {
+    void test_handleGetRequest_AnyWorkshopTruckVehicle() {
+        String beginTime = "2006-08-21";
+        String endTime = "2030-09-21";
+        String vehicleTypes = "truck";
+        String workshopPick = "any";
+
+        // Configures the env to return properties for url creation.
+        when(env.getProperty("servers.list")).thenReturn("london,manchester");
+        // Setup for London server properties
+        when(env.getProperty("servers.port.london")).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host.london")).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.get.london")).thenReturn("available");
+        when(env.getProperty("servers.allowedVehicles.london")).thenReturn("car");
+
+        // Values that are needed for mocking, but are otherwise irrelevant
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount.london")).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.london")).thenReturn("0");
+
+        // Setup for Manchester server properties
+        when(env.getProperty("servers.port.manchester")).thenReturn("http://localhost:9004/");
+        when(env.getProperty("servers.host.manchester")).thenReturn("api/v2/tire-change-times/");
+        when(env.getProperty("servers.address.get.manchester")).thenReturn("");
+        when(env.getProperty("servers.physicalAddress.manchester")).thenReturn("14 Bury New Rd, Manchester");
+        when(env.getProperty("servers.allowedVehicles.manchester")).thenReturn("car,truck");
+        when(env.getProperty("servers.localTimezoneOffset.manchester")).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat.manchester")).thenReturn("JSON");
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount.manchester")).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.manchester")).thenReturn("0");
+
+        // Act
+        ResponseEntity<List<TireReplacementTimeSlot>> response = controller.handleGetRequest(beginTime, endTime, vehicleTypes, workshopPick);
+
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        List<TireReplacementTimeSlot> timeSlots = response.getBody();
+        assertNotNull(timeSlots);
+
+        boolean hasLondon = timeSlots.stream().anyMatch(slot -> "london".equals(slot.getWorkshopName()));
+        boolean hasManchester = timeSlots.stream().anyMatch(slot -> "manchester".equals(slot.getWorkshopName()));
+        boolean hasCarVehicle = timeSlots.stream().anyMatch(slot -> "car".equals(slot.getVehicleTypesServiced()));
+        boolean hasCarAndTruckVehicle = timeSlots.stream().anyMatch(slot -> "car,truck".equals(slot.getVehicleTypesServiced()));
+
+        assertFalse(hasLondon, "Expected no time slot with workshopName 'london'");
+        assertTrue(hasManchester, "Expected a time slot with workshopName 'manchester'");
+        assertFalse(hasCarVehicle, "Expected a time slot with only 'car' not being serviced");
+        assertTrue(hasCarAndTruckVehicle, "Expected a time slot with 'car' and 'truck' being serviced");
+
+
     }
     @Test
-    void test_handleGetRequest() {
+    void test_handleGetRequest_manchesterWorkshopAnyVehicle() {
+        String beginTime = "2006-08-21";
+        String endTime = "2030-09-21";
+        String vehicleTypes = "any";
+        String workshopPick = "manchester";
+        // Configures the env to return properties for url creation.
+        when(env.getProperty("servers.allServiceableCarTypes")).thenReturn("car,truck");
+        // Setup for Manchester server properties
+        when(env.getProperty("servers.port.manchester")).thenReturn("http://localhost:9004/");
+        when(env.getProperty("servers.host.manchester")).thenReturn("api/v2/tire-change-times/");
+        when(env.getProperty("servers.address.get.manchester")).thenReturn("");
+        when(env.getProperty("servers.physicalAddress.manchester")).thenReturn("14 Bury New Rd, Manchester");
+        when(env.getProperty("servers.allowedVehicles.manchester")).thenReturn("car,truck");
+        when(env.getProperty("servers.localTimezoneOffset.manchester")).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat.manchester")).thenReturn("JSON");
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount.manchester")).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.manchester")).thenReturn("0");
+
+        // Act
+        ResponseEntity<List<TireReplacementTimeSlot>> response = controller.handleGetRequest(beginTime, endTime, vehicleTypes, workshopPick);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        List<TireReplacementTimeSlot> timeSlots = response.getBody();
+        assertNotNull(timeSlots);
+
+        boolean hasLondon = timeSlots.stream().anyMatch(slot -> "london".equals(slot.getWorkshopName()));
+        boolean hasManchester = timeSlots.stream().anyMatch(slot -> "manchester".equals(slot.getWorkshopName()));;
+        boolean hasCarAndTruckVehicle = timeSlots.stream().anyMatch(slot -> "car,truck".equals(slot.getVehicleTypesServiced()));
+
+        assertFalse(hasLondon, "Expected no time slot with workshopName 'london'");
+        assertTrue(hasManchester, "Expected a time slot with workshopName 'manchester'");
+        assertTrue(hasCarAndTruckVehicle, "Expected a time slot with 'car' and 'truck' being serviced");
+
+
     }
     @Test
-    void test_handleGetRequest() {
-    }*/
+    void test_handleGetRequest_londonWorkshopTruckVehicle() {
+        String beginTime = "2006-08-21";
+        String endTime = "2030-09-21";
+        String vehicleTypes = "truck";
+        String workshopPick = "london";
+
+        when(env.getProperty("servers.port.london")).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host.london")).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.get.london")).thenReturn("available");
+        when(env.getProperty("servers.allowedVehicles.london")).thenReturn("car");
+
+        // Values that are needed for mocking, but are otherwise irrelevant
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount.london")).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount.london")).thenReturn("0");
+
+        // Act
+        ResponseEntity<List<TireReplacementTimeSlot>> response = controller.handleGetRequest(beginTime, endTime, vehicleTypes, workshopPick);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        List<TireReplacementTimeSlot> timeSlots = response.getBody();
+        assertTrue(timeSlots.isEmpty());
+
+    }
+
+
+    //sendGetRequestXML(String workshopName, String url)
+    /*
+    1. (workshopName = "london", url = "http://localhost:9003/api/v1/tire-change-times/available?from=2006-01-02&until=2030-01-02"):
+       Expectation: A list of TireReplacementTimeSlot objects is returned, and it is not empty (indicating successful retrieval of time slots).
+
+    2. (workshopName = "london", url = "http://localhost:9003/api/v1/tire-change-times/available?from=2006-01-02&until=2006-01-02"):
+       Expectation: An empty list is returned (indicating no time slots fall within the given time range).
+    */
     @Test
     void test_sendGetRequestXML_successfulRetrieval() {
         // Arrange
@@ -260,7 +397,7 @@ class HTTPFrontendRequestControllerTest {
         String workshopName = "london";
 
         // Let the time values give a wide range of time for events to happen to ensure finding of elements.
-        String url = "http://localhost:9003/api/v1/tire-change-times/available?from=2006-01-02&until=2006-01-01";
+        String url = "http://localhost:9003/api/v1/tire-change-times/available?from=2006-01-02&until=2006-01-02";
 
         // Act
 

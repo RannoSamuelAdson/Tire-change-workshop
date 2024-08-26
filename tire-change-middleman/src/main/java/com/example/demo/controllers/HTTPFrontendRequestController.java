@@ -88,12 +88,12 @@ public class HTTPFrontendRequestController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No such available timeslot exists");
 
     }
-    public static boolean areSameMoment(String TimeString1, String TimeString2) {
+    static boolean areSameMoment(String TimeString1, String TimeString2) {
         OffsetDateTime offsetDateTime1 = OffsetDateTime.parse(TimeString1, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(TimeString2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         return offsetDateTime1.isEqual(offsetDateTime2);
     }
-    private static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env){
+    static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env){
         // Construct the URL based on the properties
         String serverPort = env.getProperty("servers.port." + workshopName);
         String serverHost = env.getProperty("servers.host." + workshopName);
@@ -199,9 +199,8 @@ public class HTTPFrontendRequestController {
 
 
 
-    public List<TireReplacementTimeSlot> routeGetRequestSending(String urlXML, String urlJSON, String workshopName, String endTime){
+    List<TireReplacementTimeSlot> routeGetRequestSending(String urlXML, String urlJSON, String workshopName, String endTime){
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
-        System.out.println("test");
         if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
             timeSlots = sendGetRequestXML(workshopName,urlXML);
 
@@ -215,7 +214,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    public List<TireReplacementTimeSlot> sendGetRequestXML(String workshopName, String urlString)  {
+    List<TireReplacementTimeSlot> sendGetRequestXML(String workshopName, String urlString)  {
 
         // Make the HTTP GET request
 
@@ -254,7 +253,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    public List<TireReplacementTimeSlot> sendGetRequestJSON(String workshopName, String url, String endTime) {
+    List<TireReplacementTimeSlot> sendGetRequestJSON(String workshopName, String url, String endTime) {
         List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
 
         // Make the HTTP GET request.
@@ -306,7 +305,7 @@ public class HTTPFrontendRequestController {
      * @param dateTimeStr The string representing the date-time (e.g., "2024-08-21T10:15:30+01:00").
      * @return true if dateStr refers to a time before or on the same day as dateTimeStr, false otherwise.
      */
-    public static boolean isDateBeforeOrEqualDateTime(String dateStr, String dateTimeStr) {
+    static boolean isDateBeforeOrEqualDateTime(String dateStr, String dateTimeStr) {
         // Parse the first date string to LocalDate
         LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
 
@@ -318,7 +317,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    public static List<String> getListFromEnvironmentProperties(Environment env, String ConfProperties){
+    static List<String> getListFromEnvironmentProperties(Environment env, String ConfProperties){
         // Retrieve the property value as a comma-separated string
         String workShops = env.getProperty(ConfProperties);
 
@@ -331,7 +330,7 @@ public class HTTPFrontendRequestController {
     }
 
 
-    public static boolean haveCommonElements(List<String> list1, List<String> list2) {
+    static boolean haveCommonElements(List<String> list1, List<String> list2) {
         // Convert the first list to a Set for faster lookup
         Set<String> set = new HashSet<>(list1);
 
@@ -345,7 +344,7 @@ public class HTTPFrontendRequestController {
         // No common elements found
         return false;
     }
-    public static String tryGetTextContent(Element element, String tagName) {
+    static String tryGetTextContent(Element element, String tagName) {
         Node node = element.getElementsByTagName(tagName).item(0);
         return (node != null) ? node.getTextContent() : null;
     }
