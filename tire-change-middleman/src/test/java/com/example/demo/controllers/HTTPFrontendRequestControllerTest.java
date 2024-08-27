@@ -55,6 +55,107 @@ class HTTPFrontendRequestControllerTest {
     void handlePostRequest() {
     }
 
+    @Test
+    void test_handlePostRequest_successfulBooking(){
+        // Arrange
+        String workshopName = "london";
+        when(env.getProperty("servers.contactInformation")).thenReturn("Tires Global");
+        when(env.getProperty("servers.allServiceableCarTypes")).thenReturn("car,truck");
+
+        when(env.getProperty("servers.port." + workshopName)).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host." + workshopName)).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.book." + workshopName)).thenReturn("booking");
+        when(env.getProperty("servers.bookingMethod." + workshopName)).thenReturn("PUT");
+        when(env.getProperty("servers.address.get." + workshopName)).thenReturn("available");
+        when(env.getProperty("servers.physicalAddress." + workshopName)).thenReturn("1A Gunton Rd, London");
+        when(env.getProperty("servers.allowedVehicles." + workshopName)).thenReturn("car");
+        when(env.getProperty("servers.localTimezoneOffset." + workshopName)).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat." + workshopName)).thenReturn("XML");
+
+        // Values that are needed for mocking, but are otherwise irrelevant
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName)).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName)).thenReturn("0");
+
+
+        ResponseEntity<List<TireReplacementTimeSlot>> getResponse = controller.handleGetRequest("2006-08-21","2030-09-21","any",workshopName);
+        TireReplacementTimeSlot timeSlot = getResponse.getBody().getFirst();
+        String availableTime = timeSlot.getTireReplacementTime();
+
+        // Act
+        ResponseEntity<String> response = controller.handlePostRequest(availableTime,"car",workshopName);
+
+        assertFalse(response.getBody().isEmpty());
+        assertEquals(response.getBody(),"Time booked successfully");
+        assertEquals(response.getStatusCode(),HttpStatus.OK);
+
+    }
+    @Test
+    void test_handlePostRequest_wrongVehicle(){
+        // Arrange
+        String workshopName = "london";
+
+        when(env.getProperty("servers.port." + workshopName)).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host." + workshopName)).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.get." + workshopName)).thenReturn("available");
+        when(env.getProperty("servers.physicalAddress." + workshopName)).thenReturn("1A Gunton Rd, London");
+        when(env.getProperty("servers.allowedVehicles." + workshopName)).thenReturn("car");
+        when(env.getProperty("servers.localTimezoneOffset." + workshopName)).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat." + workshopName)).thenReturn("XML");
+
+        // Values that are needed for mocking, but are otherwise irrelevant
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName)).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName)).thenReturn("0");
+
+
+        ResponseEntity<List<TireReplacementTimeSlot>> getResponse = controller.handleGetRequest("2006-08-21","2030-09-21","car",workshopName);
+        TireReplacementTimeSlot timeSlot = getResponse.getBody().getFirst();
+        String availableTime = timeSlot.getTireReplacementTime();
+
+        // Act
+        ResponseEntity<String> response = controller.handlePostRequest(availableTime,"truck",workshopName);
+
+        assertFalse(response.getBody().isEmpty());
+        assertEquals(response.getBody(),"This workshop does not service the vehicle type of truck");
+        assertEquals(response.getStatusCode(),HttpStatus.BAD_REQUEST);
+
+    }
+    @Test
+    void test_handlePostRequest_unavailableTime(){
+        // Arrange
+        String workshopName = "london";
+        when(env.getProperty("servers.contactInformation")).thenReturn("Tires Global");
+        when(env.getProperty("servers.allServiceableCarTypes")).thenReturn("car,truck");
+
+        when(env.getProperty("servers.port." + workshopName)).thenReturn("http://localhost:9003/");
+        when(env.getProperty("servers.host." + workshopName)).thenReturn("api/v1/tire-change-times/");
+        when(env.getProperty("servers.address.book." + workshopName)).thenReturn("booking");
+        when(env.getProperty("servers.bookingMethod." + workshopName)).thenReturn("PUT");
+        when(env.getProperty("servers.address.get." + workshopName)).thenReturn("available");
+        when(env.getProperty("servers.physicalAddress." + workshopName)).thenReturn("1A Gunton Rd, London");
+        when(env.getProperty("servers.allowedVehicles." + workshopName)).thenReturn("car");
+        when(env.getProperty("servers.localTimezoneOffset." + workshopName)).thenReturn("1");
+        when(env.getProperty("servers.responseBodyFormat." + workshopName)).thenReturn("XML");
+
+        // Values that are needed for mocking, but are otherwise irrelevant
+        when(env.getProperty("servers.getQuery.responseElements.pageAmount." + workshopName)).thenReturn("1500");
+        when(env.getProperty("servers.getQuery.responseElements.pageSkipAmount." + workshopName)).thenReturn("0");
+
+
+        ResponseEntity<List<TireReplacementTimeSlot>> getResponse = controller.handleGetRequest("2006-08-21","2030-09-21","any",workshopName);
+        TireReplacementTimeSlot timeSlot = getResponse.getBody().getFirst();
+        String availableTime = timeSlot.getTireReplacementTime();
+
+        // Act
+        controller.handlePostRequest(availableTime,"car",workshopName); // Book an available time
+        ResponseEntity<String> response = controller.handlePostRequest(availableTime,"car",workshopName); // Book that time again
+
+        assertFalse(response.getBody().isEmpty());
+        assertEquals(response.getBody(),"No such available timeslot exists");
+        assertEquals(response.getStatusCode(),HttpStatus.NOT_FOUND);
+
+    }
+
+
     //areSameMoment(String offsetDateTimeStr1, String offsetDateTimeStr2)
 	/*
 	1. (offsetDateTimeStr1 = "2023-08-21T12:30:00+00:00", offsetDateTimeStr1 = "2023-08-21T14:30:00+02:00"): return true
@@ -116,7 +217,7 @@ class HTTPFrontendRequestControllerTest {
         String id = timeSlot.getId();
 
         // Act
-        ResponseEntity<String> putResponse = HTTPFrontendRequestController.sendUpdateRequest(workshopName, id, env);
+        ResponseEntity<String> putResponse = controller.sendUpdateRequest(workshopName, id, env);
 
         // Assert
         assertTrue(putResponse.getHeaders().containsKey("X-Put-Method-Executed"));
@@ -150,7 +251,7 @@ class HTTPFrontendRequestControllerTest {
         String id = timeSlot.getId();
 
         // Act
-        ResponseEntity<String> putResponse = HTTPFrontendRequestController.sendUpdateRequest(workshopName, id, env);
+        ResponseEntity<String> putResponse = controller.sendUpdateRequest(workshopName, id, env);
 
         // Assert
         assertTrue(putResponse.getHeaders().containsKey("X-Post-Method-Executed"));

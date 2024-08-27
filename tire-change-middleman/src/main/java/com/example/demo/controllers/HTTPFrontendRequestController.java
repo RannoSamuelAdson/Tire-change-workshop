@@ -31,8 +31,6 @@ public class HTTPFrontendRequestController {
     @Autowired
     private Environment env;
 
-    public HTTPFrontendRequestController() {
-    }
 
     public HTTPFrontendRequestController(Environment env) {
         this.env = env;
@@ -81,7 +79,6 @@ public class HTTPFrontendRequestController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("This workshop does not service the vehicle type of " +  vehicleType);
                 }
 
-
             }
 
         }
@@ -93,7 +90,7 @@ public class HTTPFrontendRequestController {
         OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(TimeString2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         return offsetDateTime1.isEqual(offsetDateTime2);
     }
-    static ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env) {
+    ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env) {
         // Construct the URL based on the properties
         String serverPort = env.getProperty("servers.port." + workshopName);
         String serverHost = env.getProperty("servers.host." + workshopName);
