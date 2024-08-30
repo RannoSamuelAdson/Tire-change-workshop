@@ -1,6 +1,5 @@
 package com.example.demo.controllers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,17 +17,16 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class) // Enables Mockito annotations
 class ConfigControllerTest {
+
     @Mock
     private Environment env;
-    @Mock
-    private ObjectMapper objectMapper;
+
     @InjectMocks
     private ConfigController controller;
 
-    // handleGetRequest(String beginTime, String endTime, String vehicleTypes, String workshopPick)
     /*
      * test_getConfig()
-     * 1. (Environment returns server list of "london,manchester" and allServiceableCarTypes of "car,truck"):
+     * (Environment returns server list of "london,manchester" and allServiceableCarTypes of "car,truck"):
      *    return Map containing { "servers" -> ["london", "manchester"], "carTypes" -> ["car", "truck"] }
      */
     @Test
@@ -51,13 +49,10 @@ class ConfigControllerTest {
         assertEquals(Arrays.asList("car", "truck"), responseMap.get("carTypes"));
     }
 
-    // handleGetRequest(String beginTime, String endTime, String vehicleTypes, String workshopPick)
     /*
      * test_getTimezoneOffset_offsetFound()
-     * 1. (workshop = "london" and Environment returns "1" for timezone offset):
+     * (workshop = "london" and Environment returns "1" for timezone offset):
      *    return ResponseEntity(OK, { "timezoneOffset" -> 1 })
-     * 2. (workshop = "london" and Environment returns empty string for timezone offset):
-     *    return ResponseEntity(NOT_FOUND, {})
      */
     @Test
     void test_getTimezoneOffset_offsetFound() {
@@ -74,6 +69,11 @@ class ConfigControllerTest {
         assertEquals(response.getBody().get("timezoneOffset"), Integer.valueOf(1));
     }
 
+    /*
+     * test_getTimezoneOffset_offsetNotFound()
+     * (workshop = "london" and Environment returns empty string for timezone offset):
+     *    return ResponseEntity(NOT_FOUND, {})
+     */
     @Test
     void test_getTimezoneOffset_offsetNotFound() {
         // Arrange
