@@ -31,9 +31,15 @@ public class HTTPFrontendRequestController {
     @Autowired
     private Environment env;
 
+    public void setServerCommunicationController(ServerCommunicationController serverCommunicationController) {
+        this.serverCommunicationController = serverCommunicationController;
+    }
 
-    public HTTPFrontendRequestController(Environment env) {
+    @Autowired
+    private ServerCommunicationController serverCommunicationController;
+    public HTTPFrontendRequestController(Environment env,ServerCommunicationController serverCommunicationController) {
         this.env = env;
+        this.serverCommunicationController = serverCommunicationController;
     }
 
     @PostMapping("/book")
@@ -60,13 +66,13 @@ public class HTTPFrontendRequestController {
         String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginDate;
 
         // Since get and put requests need Id-s, it is needed to gather the timeslots of the picked day to find the one corresponding to the needed time.
-        List<TireReplacementTimeSlot> pickedDayTimeSlots = routeGetRequestSending(urlXML,urlJSON,workshopName,endDate);
+        List<TireReplacementTimeSlot> pickedDayTimeSlots = serverCommunicationController.routeGetRequestSending(urlXML,urlJSON,workshopName,endDate);
         for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots){
 
             if (areSameMoment(timeSlot.getTireReplacementTime(), beginTime)) {
 
                 if (getListFromEnvironmentProperties(env,"servers.allowedVehicles." + workshopName).contains(vehicleType)){
-                    ResponseEntity<String> response = sendUpdateRequest(workshopName,timeSlot.getId(),env);
+                    ResponseEntity<String> response = serverCommunicationController.sendUpdateRequest(workshopName,timeSlot.getId());
                     if (response.getStatusCode().is2xxSuccessful()){
                         return ResponseEntity.status(HttpStatus.OK).body("Time booked successfully");
                     }
@@ -90,40 +96,7 @@ public class HTTPFrontendRequestController {
         OffsetDateTime offsetDateTime2 = OffsetDateTime.parse(TimeString2, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         return offsetDateTime1.isEqual(offsetDateTime2);
     }
-    ResponseEntity<String> sendUpdateRequest(String workshopName, String id, Environment env) {
-        // Construct the URL based on the properties
-        String serverPort = env.getProperty("servers.port." + workshopName);
-        String serverHost = env.getProperty("servers.host." + workshopName);
-        String serverBookAddress = env.getProperty("servers.address.book." + workshopName);
-        // Construct the full URL for the PUT request
-        String url = serverPort + serverHost + id + "/" + serverBookAddress;
-        String bookMethod = env.getProperty("servers.bookingMethod." + workshopName);
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> bookingResponse = new ResponseEntity<>(HttpStatus.OK);
 
-        // Prepare the request body
-        TireChangeBookingRequest bookingRequestBody = new TireChangeBookingRequest(env.getProperty("servers.contactInformation"));
-        HttpHeaders headers = new HttpHeaders();
-        HttpHeaders updatedHeaders = new HttpHeaders();
-
-        if (Objects.equals(bookMethod, "PUT")) {
-            headers.setContentType(MediaType.APPLICATION_XML);
-            HttpEntity<TireChangeBookingRequest> requestEntity = new HttpEntity<>(bookingRequestBody, headers);
-            bookingResponse = restTemplate.exchange(url, HttpMethod.PUT, requestEntity, String.class);
-            updatedHeaders.putAll(bookingResponse.getHeaders());
-            updatedHeaders.add("X-Put-Method-Executed", "true"); // Adding a flag for tests to check.
-        }
-        if (Objects.equals(bookMethod, "POST")) {
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<TireChangeBookingRequest> requestEntity = new HttpEntity<>(bookingRequestBody, headers);
-            bookingResponse = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
-            updatedHeaders.putAll(bookingResponse.getHeaders());
-            updatedHeaders.add("X-Post-Method-Executed", "true"); // Adding a flag for tests to check.
-        }
-
-        return new ResponseEntity<>(bookingResponse.getBody(), updatedHeaders, bookingResponse.getStatusCode());
-
-    }
 
 
 
@@ -156,7 +129,7 @@ public class HTTPFrontendRequestController {
             }
 
             if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
-                timeSlots.addAll(routeGetRequestSending(urlXML,urlJSON, workshopPick,endTime));
+                timeSlots.addAll(serverCommunicationController.routeGetRequestSending(urlXML,urlJSON, workshopPick,endTime));
         }
         if (Objects.equals(workshopPick, "any")){
 
@@ -182,7 +155,7 @@ public class HTTPFrontendRequestController {
                 if (!haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse cannot service the needed vehicle
                     timeSlots = new ArrayList<>();
                 if (haveCommonElements(vehicleTypesList,workshopAllowedVehiclesList)) // If this warehouse can service the needed vehicle
-                    timeSlots.addAll(routeGetRequestSending(urlXML, urlJSON, workshopName, endTime));
+                    timeSlots.addAll(serverCommunicationController.routeGetRequestSending(urlXML, urlJSON, workshopName, endTime));
             }
 
         }
@@ -194,104 +167,6 @@ public class HTTPFrontendRequestController {
     }
 
 
-
-
-    List<TireReplacementTimeSlot> routeGetRequestSending(String urlXML, String urlJSON, String workshopName, String endTime){
-        List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
-        if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "XML")) {// If the format is XML
-            timeSlots = sendGetRequestXML(workshopName,urlXML);
-
-        }
-
-        if (Objects.equals(env.getProperty("servers.responseBodyFormat." + workshopName), "JSON")) {// If the format is JSON
-            timeSlots = sendGetRequestJSON(workshopName,urlJSON,endTime);
-        }
-        return timeSlots;
-
-    }
-
-
-    List<TireReplacementTimeSlot> sendGetRequestXML(String workshopName, String urlString)  {
-
-        // Make the HTTP GET request
-
-        List<TireReplacementTimeSlot> timeSlotsList = new ArrayList<>();
-
-        // Parse the XML response
-        try {
-            URL getURL = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) getURL.openConnection();
-            connection.setRequestMethod("GET");
-            try (InputStream inputStream = connection.getInputStream()) {
-
-
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();// Making parser to read XML.
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                Document document = builder.parse(inputStream);// Parsing XML to get it readable for code.
-
-                NodeList timeslotNodes = document.getElementsByTagName("availableTime");// Separating data by different timeslots.
-                for (int i = 0; i < timeslotNodes.getLength(); i++) {// Convert the parsed data to TireReplacementTimeSlot objects
-
-                    Element timeslotElement = (Element) timeslotNodes.item(i);// Get element with index i in a station.
-                    timeSlotsList.add(new TireReplacementTimeSlot(
-                            workshopName,
-                            env.getProperty("servers.physicalAddress." + workshopName),
-                            tryGetTextContent(timeslotElement, "uuid"),
-                            tryGetTextContent(timeslotElement, "time"),
-                            Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
-                            env.getProperty("servers.allowedVehicles." + workshopName)));
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return timeSlotsList;
-
-    }
-
-
-    List<TireReplacementTimeSlot> sendGetRequestJSON(String workshopName, String url, String endTime) {
-        List<TireReplacementTimeSlot> timeSlots = new ArrayList<>();
-
-        // Make the HTTP GET request.
-        RestTemplate restTemplate = new RestTemplate();
-        String jsonData = restTemplate.getForObject(url, String.class);
-
-        try {
-            // Parse the JSON response.
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(jsonData);
-
-            // Iterate through the JSON array and filter available times.
-            for (JsonNode node : rootNode) {
-
-                boolean available = node.get("available").asBoolean();
-
-                String id = node.get("id").asText();
-                String time = node.get("time").asText();
-
-                if (isDateBeforeOrEqualDateTime(endTime,time)) // Stops the reading when endTime is reached.
-                    break;
-                if (available) {
-
-                    // Create a new TireReplacementTimeSlot object and add it to the list
-                    TireReplacementTimeSlot timeSlot = new TireReplacementTimeSlot(
-                            workshopName,
-                            env.getProperty("servers.physicalAddress." + workshopName), // Get physical address from properties
-                            id,
-                            time,
-                            Integer.parseInt(Objects.requireNonNull(env.getProperty("servers.localTimezoneOffset." + workshopName))),
-                            env.getProperty("servers.allowedVehicles." + workshopName)
-                    );
-                    timeSlots.add(timeSlot);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return timeSlots;
-    }
 
 
     /**
