@@ -22,7 +22,7 @@
         <form id="tire_replacement_book_form">
             <div>
                 Pick a time
-                <input type="datetime-local" id="maintenance_time" step="3600">
+                <input type="datetime-local" id="maintenance_time">
             </div>
             <div>
                 Pick car type
@@ -164,86 +164,112 @@ function getTimeZoneOffsetString(offset) {
 }
 
 
-    document.getElementById("submit_filters").addEventListener("click", function() {
-        var startTime = document.getElementById("free_timeslot_start").value;
-        var endTime = document.getElementById("free_timeslot_end").value;
-        var vehicleType = document.getElementById("car_type_filter_pick").value;
-        var workshopName = document.getElementById("workshop_filter_pick").value;
+document.getElementById("submit_filters").addEventListener("click", function() {
+    var startTime = document.getElementById("free_timeslot_start").value;
+    var endTime = document.getElementById("free_timeslot_end").value;
+    var vehicleType = document.getElementById("car_type_filter_pick").value;
+    var workshopName = document.getElementById("workshop_filter_pick").value;
 
-        if (!startTime || !endTime) {
-            alert("Please fill in all the fields before searching.");
-            return;
-        }
+    if (!startTime || !endTime) {
+        alert("Please fill in all the fields before searching.");
+        return;
+    }
 
-        var url = "/filter?beginTime=" + encodeURIComponent(startTime) + "&endTime=" +
-                  encodeURIComponent(endTime) + "&vehicleTypes=" + encodeURIComponent(vehicleType) +
-                  "&workshopPick=" + encodeURIComponent(workshopName);
+    var url = "/filter?beginTime=" + encodeURIComponent(startTime) + "&endTime=" +
+              encodeURIComponent(endTime) + "&vehicleTypes=" + encodeURIComponent(vehicleType) +
+              "&workshopPick=" + encodeURIComponent(workshopName);
 
-        fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-        })
-        .then(response => {
-            var tbody = document.querySelector("#results_table tbody");
-            var resultsTable = document.getElementById("results_table");
-            var responseText = document.getElementById("get_response_text");
+    fetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    })
+    .then(response => {
+        var tbody = document.querySelector("#results_table tbody");
+        var resultsTable = document.getElementById("results_table");
+        var responseText = document.getElementById("get_response_text");
 
-            if (response.status === 200) {
-                return response.json().then(data => {
-                    tbody.innerHTML = "";
-                    resultsTable.style.visibility = "visible";
-                    responseText.innerText = "";
+        if (response.status === 200) {
+            return response.json().then(data => {
+                tbody.innerHTML = "";
+                resultsTable.style.visibility = "visible";
+                responseText.innerText = "";
 
-                    data.forEach(item => {
-                        var date = new Date(item.tireReplacementTime);
+                data.forEach(item => {
+                    var date = new Date(item.tireReplacementTime);
 
-                        if (isNaN(date.getTime())) {
-                            // If the date is invalid, log the error for debugging
-                            console.error("Invalid date format:", item.tireReplacementTime);
-                        } else {
-                            // Format the date directly
-                            var formattedDate = date.toLocaleDateString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric"
-                            });
-                            var formattedTime = date.toLocaleTimeString("en-GB", {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                            });
+                    if (isNaN(date.getTime())) {
+                        console.error("Invalid date format:", item.tireReplacementTime);
+                    } else {
+                        // Format the date and time for display (local time)
+                        var formattedDate = date.toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric"
+                        });
+                        var formattedTime = date.toLocaleTimeString("en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                        });
 
-                            var row = `<tr>
-                                <td>${item.workshopName}</td>
-                                <td>${item.workshopAddress}</td>
-                                <td>${formattedDate} ${formattedTime}</td>
-                                <td>${item.vehicleTypesServiced}</td>
-                            </tr>`;
-                            tbody.insertAdjacentHTML('beforeend', row);
-                        }
-                    });
+                        // Local ISO format (yyyy-mm-ddTHH:mm)
+                        var localISO = date.getFullYear() + '-' +
+                                       String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                                       String(date.getDate()).padStart(2, '0') + 'T' +
+                                       String(date.getHours()).padStart(2, '0') + ':' +
+                                       String(date.getMinutes()).padStart(2, '0');
+
+                        // Capitalize the first letter of the workshop name for display
+                        var displayWorkshopName = item.workshopName.charAt(0).toUpperCase() + item.workshopName.slice(1);
+
+                        // Insert the row with the display value and data-* attribute
+                        var row = `<tr onclick="populateForm(this)">
+                            <td data-original="${item.workshopName}">${displayWorkshopName}</td>
+                            <td>${item.workshopAddress}</td>
+                            <td data-iso="${localISO}">${formattedDate} ${formattedTime}</td>
+                            <td>${item.vehicleTypesServiced}</td>
+                        </tr>`;
+                        tbody.insertAdjacentHTML('beforeend', row);
+                    }
                 });
-            } else if (response.status === 204) {
-                tbody.innerHTML = "";
-                resultsTable.style.visibility = "hidden";
-                responseText.innerText = "No workshops can meet these conditions";
-            } else {
-                tbody.innerHTML = "";
-                resultsTable.style.visibility = "hidden";
-                responseText.innerText = "Something went wrong. Try again.";
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            var resultsTable = document.getElementById("results_table");
-            var responseText = document.getElementById("get_response_text");
-
+            });
+        } else if (response.status === 204) {
+            tbody.innerHTML = "";
+            resultsTable.style.visibility = "hidden";
+            responseText.innerText = "No workshops can meet these conditions";
+        } else {
+            tbody.innerHTML = "";
             resultsTable.style.visibility = "hidden";
             responseText.innerText = "Something went wrong. Try again.";
-        });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        var resultsTable = document.getElementById("results_table");
+        var responseText = document.getElementById("get_response_text");
 
+        resultsTable.style.visibility = "hidden";
+        responseText.innerText = "Something went wrong. Try again.";
     });
+});
+function populateForm(row) {
+    // Extract values from the clicked row
+    var workshopName = row.querySelector('td[data-original]').dataset.original;
+    var dateTimeISO = row.querySelector('td[data-iso]').dataset.iso;
+    var vehicleTypes = row.cells[3].innerText.split(',').map(type => type.trim());
+
+    // Populate the datetime-local input field
+    document.getElementById('maintenance_time').value = dateTimeISO;
+
+    // Populate the car type dropdown with the first vehicle type
+    var carTypeSelect = document.getElementById('car_type_pick');
+    carTypeSelect.value = vehicleTypes[0].toLowerCase();
+
+    // Populate the workshop dropdown
+    var workshopSelect = document.getElementById('workshop_pick');
+    workshopSelect.value = workshopName.toLowerCase();
+}
 
     // Function to fetch configuration values and populate the select elements
     function populateOptions() {

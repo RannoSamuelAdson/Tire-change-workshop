@@ -116,6 +116,11 @@ th, td {
 
     color: white;
 }
+tbody tr:hover,
+tbody tr:hover td {
+    background-color: #F2CC20; /* Background color for the row */
+    color: #232121; /* Text color for the row and all td elements */
+}
 th{
 background-color: #232121;
 }
