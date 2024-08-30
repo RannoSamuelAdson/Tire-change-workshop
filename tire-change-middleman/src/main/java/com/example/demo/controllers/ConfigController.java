@@ -23,9 +23,6 @@ public class ConfigController {
     @Autowired
     private Environment env;
 
-    @Autowired
-    private ObjectMapper objectMapper; // Injecting ObjectMapper
-
     /**
      * Retrieves the server configurations and serviceable car types from the environment properties.
      *
@@ -34,15 +31,15 @@ public class ConfigController {
      */
     @GetMapping("/config")
     public Map<String, Object> getConfig() throws IOException {
-        // Retrieve property values
+        // Retrieve property values.
         String serversList = env.getProperty("servers.list");
         String allServiceableCarTypes = env.getProperty("servers.allServiceableCarTypes");
 
-        // Convert the comma-separated strings into lists
+        // Convert the comma-separated strings into lists.
         List<String> servers = Arrays.asList(serversList.split(","));
         List<String> carTypes = Arrays.asList(allServiceableCarTypes.split(","));
 
-        // Return the lists in a map
+        // Return the lists in a map.
         return Map.of(
                 "servers", servers,
                 "carTypes", carTypes
@@ -57,19 +54,19 @@ public class ConfigController {
      */
     @GetMapping("/timezone-offset")
     public ResponseEntity<Map<String, Integer>> getTimezoneOffset(@RequestParam String workshop) {
-        // Construct the property key to retrieve the offset
+        // Construct the property key to retrieve the offset.
         String propertyKey = "servers.localTimezoneOffset." + workshop;
         String offsetStr = env.getProperty(propertyKey);
 
-        // Check if the property value exists and is not empty
+        // Check if the property value exists and is not empty.
         if (offsetStr != null && !offsetStr.isEmpty()) {
             int offset = Integer.parseInt(offsetStr);
             Map<String, Integer> response = new HashMap<>();
             response.put("timezoneOffset", offset);
-            return ResponseEntity.ok(response); // Return the offset in the response body
+            return ResponseEntity.ok(response); // Return the offset in the response body.
         }
 
-        // Return 404 status if the offset is not found
+        // Return 404 status if the offset is not found.
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 }
