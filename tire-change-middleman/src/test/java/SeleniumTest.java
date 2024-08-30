@@ -9,6 +9,12 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.util.AssertionErrors.assertNotNull;
@@ -24,7 +30,7 @@ public class SeleniumTest {
         driver = new ChromeDriver();
 
         // Set the implicit wait time to 5 seconds
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(3));
     }
 
     @AfterEach
@@ -33,7 +39,140 @@ public class SeleniumTest {
             driver.quit();
         }
     }
+    public String dateTimeFormatter(String inputDate) {
+        // Define the formatter for the input date
+        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm", Locale.ENGLISH);
 
+        // Parse the input date string into a LocalDateTime object
+        LocalDateTime dateTime = LocalDateTime.parse(inputDate, inputFormatter);
+
+        // Define the formatter for the output date in the correct datetime-local format
+        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+        // Format the LocalDateTime object into the desired string format
+        return dateTime.format(outputFormatter);
+    }
+    @Test
+    public void test_submitBooking_success() throws InterruptedException {
+
+        driver.get("http://localhost:8080/interface.html"); // Replace with your actual URL
+
+        // Locate the elements and input the values
+        WebElement startDateInput = driver.findElement(By.id("free_timeslot_start"));
+        startDateInput.sendKeys("01-01-2006");
+
+        WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
+        endDateInput.sendKeys("01-01-2030");
+
+        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        carTypeSelect.sendKeys("any");
+
+        WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
+        workshopSelect.sendKeys("any");
+
+        // Click the submit button
+        WebElement submitButton = driver.findElement(By.id("submit_filters"));
+        submitButton.click();
+
+        // Locate the table by its ID
+        WebElement resultsTable = driver.findElement(By.id("results_table"));
+
+        // Use XPath to locate the first child of the second child element
+        WebElement targetElement = resultsTable.findElement(By.xpath("./tbody/tr[1]"));
+        targetElement.click();
+
+        WebElement bookingButton = driver.findElement(By.id("submit_booking"));
+        bookingButton.click();
+        Thread.sleep(3000); // Wait for the server to respond.
+
+
+
+        WebElement postRequestResponse = driver.findElement(By.id("post_response_text"));
+        assertEquals(postRequestResponse.getText(),"Time booked successfully");
+
+    }
+    @Test
+    public void test_submitBooking_unavailableTime() throws InterruptedException {
+
+        driver.get("http://localhost:8080/interface.html"); // Replace with your actual URL
+
+        // Locate the elements and input the values
+        WebElement startDateInput = driver.findElement(By.id("free_timeslot_start"));
+        startDateInput.sendKeys("01-01-2006");
+
+        WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
+        endDateInput.sendKeys("01-01-2030");
+
+        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        carTypeSelect.sendKeys("any");
+
+        WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
+        workshopSelect.sendKeys("any");
+
+        // Click the submit button
+        WebElement submitButton = driver.findElement(By.id("submit_filters"));
+        submitButton.click();
+
+        // Locate the table by its ID
+        WebElement resultsTable = driver.findElement(By.id("results_table"));
+
+        // Use XPath to locate the first child of the second child element
+        WebElement targetElement = resultsTable.findElement(By.xpath("./tbody/tr[1]"));
+        targetElement.click();
+
+        WebElement bookingButton = driver.findElement(By.id("submit_booking"));
+        bookingButton.click(); // Book a time.
+        bookingButton.click(); // Rebook that same time.
+        Thread.sleep(3000); // Wait for the server to respond.
+
+
+        WebElement postRequestResponse = driver.findElement(By.id("post_response_text"));
+        assertEquals(postRequestResponse.getText(),"No such available timeslot exists");
+
+    }
+    @Test
+    public void test_submitBooking_wrongVehicle() throws InterruptedException {
+
+        driver.get("http://localhost:8080/interface.html"); // Replace with your actual URL
+
+        String vehicleType = "truck";
+
+        // Locate the elements and input the values
+        WebElement startDateInput = driver.findElement(By.id("free_timeslot_start"));
+        startDateInput.sendKeys("01-01-2006");
+
+        WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
+        endDateInput.sendKeys("01-01-2030");
+
+        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        carTypeSelect.sendKeys("car");
+
+        WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
+        workshopSelect.sendKeys("london");
+
+        // Click the submit button
+        WebElement submitButton = driver.findElement(By.id("submit_filters"));
+        submitButton.click();
+
+        // Locate the table by its ID
+        WebElement resultsTable = driver.findElement(By.id("results_table"));
+
+        // Use XPath to locate the first child of the second child element
+        WebElement targetElement = resultsTable.findElement(By.xpath("./tbody/tr[1]"));
+        targetElement.click();
+
+        WebElement bookingCarTypeSelect = driver.findElement(By.id("car_type_pick"));
+        bookingCarTypeSelect.sendKeys("truck"); // Pick a car type that is not supported by that workshop.
+
+        WebElement bookingButton = driver.findElement(By.id("submit_booking"));
+        bookingButton.click();
+        Thread.sleep(3000);
+
+
+        WebElement postRequestResponse = driver.findElement(By.id("post_response_text"));
+        assertEquals(postRequestResponse.getText(),"This workshop does not service the vehicle type of " + vehicleType);
+
+    }
     @Test
     public void test_submitFilters_anyVehicleAnyWorkshop() {
 
@@ -56,8 +195,8 @@ public class SeleniumTest {
         WebElement submitButton = driver.findElement(By.id("submit_filters"));
         submitButton.click();
 
-        WebElement londonCell = driver.findElement(By.xpath("//td[text()='london']"));
-        WebElement manchesterCell = driver.findElement(By.xpath("//td[text()='manchester']"));
+        WebElement londonCell = driver.findElement(By.xpath("//td[text()='London']"));
+        WebElement manchesterCell = driver.findElement(By.xpath("//td[text()='Manchester']"));
         assertTrue(londonCell.isDisplayed(), "<td>london</td> is not displayed on the page!");
         assertTrue(manchesterCell.isDisplayed(), "<td>manchester</td> is not displayed on the page!");
     }
@@ -150,15 +289,12 @@ public class SeleniumTest {
         WebElement submitButton = driver.findElement(By.id("submit_filters"));
         submitButton.click();
 
-        ;
-
         // Check for the car,truck cell
         WebElement carCell = driver.findElement(By.xpath("//td[text()='car']"));
-        WebElement londonCell = driver.findElement(By.xpath("//td[text()='london']"));
+        WebElement londonCell = driver.findElement(By.xpath("//td[text()='London']"));
         assertTrue(londonCell.isDisplayed(), "<td>london</td> is not displayed on the page!");
         assertTrue(carCell.isDisplayed(), "<td>car,truck</td> is not displayed on the page!");
 
-        // Check if <td>car</td> does not exist
         boolean manchesterCellAbsent;
         try {
             driver.findElement(By.xpath("//td[text()='manchester']"));
@@ -167,7 +303,6 @@ public class SeleniumTest {
             manchesterCellAbsent = true; // If not found, set to true
         }
 
-        // Assert that <td>car</td> is absent
         assertTrue(manchesterCellAbsent, "<td>manchester</td> is displayed on the page!");
     }
     @Test
@@ -224,6 +359,7 @@ public class SeleniumTest {
         assertTrue(responseTextElement.getText().contains(expectedText),
                 "The message 'No workshops can meet these conditions' is not displayed!");
     }
+
 
 
 }
