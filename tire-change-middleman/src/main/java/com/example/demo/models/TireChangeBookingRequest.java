@@ -8,8 +8,6 @@ public class TireChangeBookingRequest {
 
     private String contactInformation;
 
-    public TireChangeBookingRequest() {}
-
     public TireChangeBookingRequest(String contactInformation) {
         this.contactInformation = contactInformation;
     }
