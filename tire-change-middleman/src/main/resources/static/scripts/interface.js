@@ -2,7 +2,7 @@
 // Submits the booking of a tire replacement time.
 document.getElementById("submit_booking").addEventListener("click", function() {
     var beginTime = document.getElementById("maintenance_time").value;
-    var vehicleType = document.getElementById("car_type_pick").value;
+    var vehicleType = document.getElementById("vehicle_type_pick").value;
     var workshopName = document.getElementById("workshop_pick").value;
 
     // Fetch the local timezone offset for the selected workshop
@@ -66,7 +66,7 @@ function getTimeZoneOffsetString(offset) {
 document.getElementById("submit_filters").addEventListener("click", function() {
     var startTime = document.getElementById("free_timeslot_start").value;
     var endTime = document.getElementById("free_timeslot_end").value;
-    var vehicleType = document.getElementById("car_type_filter_pick").value;
+    var vehicleType = document.getElementById("vehicle_type_filter_pick").value;
     var workshopName = document.getElementById("workshop_filter_pick").value;
 
     if (!startTime || !endTime) { // Ensures valid parameters for get request.
@@ -164,7 +164,7 @@ function populateForm(row) {
 
     document.getElementById('maintenance_time').value = dateTimeISO;
 
-    var carTypeSelect = document.getElementById('car_type_pick');
+    var carTypeSelect = document.getElementById('vehicle_type_pick');
     carTypeSelect.value = vehicleTypes[0].toLowerCase();
 
     var workshopSelect = document.getElementById('workshop_pick');
@@ -177,8 +177,8 @@ function populateOptions() {
         .then(response => response.json())
         .then(data => {
             const serversSelect = document.getElementById('workshop_pick');
-            const carTypesSelect = document.getElementById('car_type_pick');
-            const carTypeFilterSelect = document.getElementById('car_type_filter_pick');
+            const carTypesSelect = document.getElementById('vehicle_type_pick');
+            const carTypeFilterSelect = document.getElementById('vehicle_type_filter_pick');
             const workshopFilterSelect = document.getElementById('workshop_filter_pick');
 
             // Populate workshop options.

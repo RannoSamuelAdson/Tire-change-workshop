@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -43,7 +42,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("any");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -79,7 +78,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("any");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -141,7 +140,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("car");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -154,7 +153,7 @@ public class SeleniumTest {
         WebElement targetElement = resultsTable.findElement(By.xpath("./tbody/tr[1]"));
         targetElement.click();
 
-        WebElement bookingCarTypeSelect = driver.findElement(By.id("car_type_pick"));
+        WebElement bookingCarTypeSelect = driver.findElement(By.id("vehicle_type_pick"));
         bookingCarTypeSelect.sendKeys("truck"); // Picking a car type that is not supported by that workshop.
 
         WebElement bookingButton = driver.findElement(By.id("submit_booking"));
@@ -182,7 +181,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("any");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -212,7 +211,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("truck");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -253,7 +252,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("any");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -283,7 +282,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("car");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -322,7 +321,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2030");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("truck");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -352,7 +351,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("01-01-2006");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("any");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
@@ -384,7 +383,7 @@ public class SeleniumTest {
         WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
         endDateInput.sendKeys("");
 
-        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        WebElement carTypeSelect = driver.findElement(By.id("vehicle_type_filter_pick"));
         carTypeSelect.sendKeys("any");
 
         WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
