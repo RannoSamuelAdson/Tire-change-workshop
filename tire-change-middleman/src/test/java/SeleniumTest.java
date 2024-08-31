@@ -226,7 +226,7 @@ public class SeleniumTest {
 ;
 
         // Check for the car,truck cell
-        WebElement carAndTruckCell = driver.findElement(By.xpath("//td[text()='car,truck']"));
+        WebElement carAndTruckCell = driver.findElement(By.xpath("//td[text()='car, truck']"));
         assertTrue(carAndTruckCell.isDisplayed(), "<td>car,truck</td> is not displayed on the page!");
 
         // Check, that <td>car</td> does not exist.
@@ -265,7 +265,7 @@ public class SeleniumTest {
         submitButton.click();
 
         WebElement carCell = driver.findElement(By.xpath("//td[text()='car']"));
-        WebElement carAndTruckCell = driver.findElement(By.xpath("//td[text()='car,truck']"));
+        WebElement carAndTruckCell = driver.findElement(By.xpath("//td[text()='car, truck']"));
 
         // Assert
         assertTrue(carCell.isDisplayed(), "<td>car</td> is not displayed on the page!");

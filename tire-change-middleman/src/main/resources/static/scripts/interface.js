@@ -121,12 +121,15 @@ document.getElementById("submit_filters").addEventListener("click", function() {
                     // Capitalize the first letter of the workshop name for display.
                     var displayWorkshopName = item.workshopName.charAt(0).toUpperCase() + item.workshopName.slice(1);
 
+                    // Add a space after every comma.
+                    var formattedVehicleTypes = item.vehicleTypesServiced.replace(/,/g, ', ');
+
                     // Insert the row with the display value and data-* attribute.
                     var row = `<tr onclick="populateForm(this)">
                         <td data-original="${item.workshopName}">${displayWorkshopName}</td>
                         <td>${item.workshopAddress}</td>
                         <td data-iso="${localISO}">${formattedDate} ${formattedTime}</td>
-                        <td>${item.vehicleTypesServiced}</td>
+                        <td>${formattedVehicleTypes}</td>
                     </tr>`;
                     tbody.insertAdjacentHTML('beforeend', row);
                     
@@ -157,7 +160,7 @@ function populateForm(row) {
     // Extract values from the clicked row.
     var workshopName = row.querySelector('td[data-original]').dataset.original;
     var dateTimeISO = row.querySelector('td[data-iso]').dataset.iso;
-    var vehicleTypes = row.cells[3].innerText.split(',').map(type => type.trim());
+    var vehicleTypes = row.cells[3].innerText.split(', ').map(type => type.trim());
 
     document.getElementById('maintenance_time').value = dateTimeISO;
 
