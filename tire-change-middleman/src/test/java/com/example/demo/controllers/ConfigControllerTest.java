@@ -24,11 +24,6 @@ class ConfigControllerTest {
     @InjectMocks
     private ConfigController controller;
 
-    /*
-     * test_getConfig()
-     * (Environment returns server list of "london,manchester" and allServiceableCarTypes of "car,truck"):
-     *    return Map containing { "servers" -> ["london", "manchester"], "carTypes" -> ["car", "truck"] }
-     */
     @Test
     void test_getConfig() throws IOException {
         // Arrange
@@ -49,11 +44,6 @@ class ConfigControllerTest {
         assertEquals(Arrays.asList("car", "truck"), responseMap.get("carTypes"));
     }
 
-    /*
-     * test_getTimezoneOffset_offsetFound()
-     * (workshop = "london" and Environment returns "1" for timezone offset):
-     *    return ResponseEntity(OK, { "timezoneOffset" -> 1 })
-     */
     @Test
     void test_getTimezoneOffset_offsetFound() {
         // Arrange
@@ -69,11 +59,6 @@ class ConfigControllerTest {
         assertEquals(response.getBody().get("timezoneOffset"), Integer.valueOf(1));
     }
 
-    /*
-     * test_getTimezoneOffset_offsetNotFound()
-     * (workshop = "london" and Environment returns empty string for timezone offset):
-     *    return ResponseEntity(NOT_FOUND, {})
-     */
     @Test
     void test_getTimezoneOffset_offsetNotFound() {
         // Arrange
