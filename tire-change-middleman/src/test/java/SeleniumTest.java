@@ -2,11 +2,12 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -104,6 +105,27 @@ public class SeleniumTest {
         // Assert
         assertEquals(postRequestResponse.getText(),"No such available timeslot exists");
 
+    }
+    @Test
+    public void test_submitBooking_emptyDateTimeInput() throws InterruptedException {
+        // Arrange
+        driver.get("http://localhost:8080/interface.html");
+
+        // Ensuring the maintenance time input is empty.
+        WebElement maintenanceTime = driver.findElement(By.id("maintenance_time"));
+        maintenanceTime.sendKeys("");
+
+        WebElement bookingButton = driver.findElement(By.id("submit_booking"));
+
+        // Act
+        bookingButton.click();
+
+        WebDriverWait wait = new WebDriverWait(driver,Duration.ofSeconds(3));
+        Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+
+        // Assert
+        assertEquals(alert.getText(),
+                "Please pick a time slot before booking.");
     }
 
     @Test
@@ -320,7 +342,7 @@ public class SeleniumTest {
     }
 
     @Test
-    public void test_submitFilters_faultyDates() {
+    public void test_submitFilters_faultyDates() throws InterruptedException {
         // Arrange
         driver.get("http://localhost:8080/interface.html");
 
@@ -344,8 +366,40 @@ public class SeleniumTest {
         WebElement responseTextElement = driver.findElement(By.id("get_response_text"));
         String expectedText = "No workshops can meet these conditions";
 
+        Thread.sleep(3000);
+
         // Assert
         assertTrue(responseTextElement.getText().contains(expectedText),
                 "The message 'No workshops can meet these conditions' is not displayed!");
+    }
+
+    @Test
+    public void test_submitFilters_emptyDateInputs(){
+        // Arrange
+        driver.get("http://localhost:8080/interface.html");
+
+        WebElement startDateInput = driver.findElement(By.id("free_timeslot_start"));
+        startDateInput.sendKeys("");
+
+        WebElement endDateInput = driver.findElement(By.id("free_timeslot_end"));
+        endDateInput.sendKeys("");
+
+        WebElement carTypeSelect = driver.findElement(By.id("car_type_filter_pick"));
+        carTypeSelect.sendKeys("any");
+
+        WebElement workshopSelect = driver.findElement(By.id("workshop_filter_pick"));
+        workshopSelect.sendKeys("any");
+
+        WebElement submitButton = driver.findElement(By.id("submit_filters"));
+
+        // Act
+        submitButton.click();
+
+        WebDriverWait wait = new WebDriverWait(driver,Duration.ofSeconds(3));
+        Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+
+        // Assert
+        assertEquals(alert.getText(),
+                "Please fill in all the fields before searching.");
     }
 }
