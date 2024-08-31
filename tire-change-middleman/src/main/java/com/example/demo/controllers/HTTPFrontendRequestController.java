@@ -35,6 +35,8 @@ public class HTTPFrontendRequestController {
 
     /**
      * Handles a POST request to book a tire replacement time slot.
+     * Sends a GET request to a server to find the time slot picked.
+     * If compatible and found, sends an update request to the server
      *
      * @param beginTime   The beginning time of the time slot.
      * @param vehicleType The type of vehicle.
@@ -59,23 +61,25 @@ public class HTTPFrontendRequestController {
         String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginDate + "&until=" + endDate;
         String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginDate;
 
+        // Gets the timeslots of that day.
         List<TireReplacementTimeSlot> pickedDayTimeSlots = serverCommunicationController.routeGetRequestSending(urlXML, urlJSON, workshopName, endDate);
+
+        if (!getListFromEnvironmentProperties(env, "servers.allowedVehicles." + workshopName).contains(vehicleType))
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("This workshop does not service the vehicle type of " + vehicleType);
+
+        // Cycles through the time slots gathered.
         for (TireReplacementTimeSlot timeSlot : pickedDayTimeSlots) {
 
             if (areSameMoment(timeSlot.getTireReplacementTime(), beginTime)) {
 
-                if (getListFromEnvironmentProperties(env, "servers.allowedVehicles." + workshopName).contains(vehicleType)) {
-                    ResponseEntity<String> response = serverCommunicationController.sendUpdateRequest(workshopName, timeSlot.getId());
-                    if (response.getStatusCode().is2xxSuccessful()) {
-                        return ResponseEntity.status(HttpStatus.OK).body("Time booked successfully");
-                    }
-                    if (!response.getStatusCode().is2xxSuccessful()) {
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something went wrong, try again.");
-                    }
+                ResponseEntity<String> response = serverCommunicationController.sendUpdateRequest(workshopName, timeSlot.getId());
+
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    return ResponseEntity.status(HttpStatus.OK).body("Time booked successfully");
                 }
 
-                if (!getListFromEnvironmentProperties(env, "servers.allowedVehicles." + workshopName).contains(vehicleType)) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("This workshop does not service the vehicle type of " + vehicleType);
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something went wrong, try again.");
                 }
             }
         }
@@ -97,11 +101,13 @@ public class HTTPFrontendRequestController {
 
     /**
      * Handles a GET request to filter tire replacement time slots.
+     * Routes differently if "vehicleTypes" or "workshopPick" is one specific element or "any".
+     * Ensures only picked workshops with compatible vehicle types are queried.
      *
      * @param beginTime    The beginning time for filtering.
      * @param endTime      The ending time for filtering.
-     * @param vehicleTypes The types of vehicles to filter by.
-     * @param workshopPick The workshop(s) to filter by.
+     * @param vehicleTypes The types of vehicles to filter by. Can be a specific type or "any".
+     * @param workshopPick The workshop(s) to filter by. Can be a specific workshop or "any".
      * @return ResponseEntity with a list of TireReplacementTimeSlot objects.
      */
     @GetMapping("/filter")
@@ -125,8 +131,8 @@ public class HTTPFrontendRequestController {
 
             String urlXML = serverPort + serverHost + serverGetAddress + "?from=" + beginTime + "&until=" + endTime;
             String urlJSON = serverPort + serverHost + serverGetAddress + "?amount=" + pageAmount + "&page=" + pageSkipAmount + "&from=" + beginTime;
-
             List<String> workshopAllowedVehiclesList = getListFromEnvironmentProperties(env, "servers.allowedVehicles." + workshopPick);
+
             if (!vehicleTypes.equals("any")) {
                 vehicleTypesList = new ArrayList<>();
                 vehicleTypesList.add(vehicleTypes);
@@ -155,8 +161,6 @@ public class HTTPFrontendRequestController {
                     vehicleTypesList.add(vehicleTypes);
                 }
 
-                if (!haveCommonElements(vehicleTypesList, workshopAllowedVehiclesList))
-                    timeSlots = new ArrayList<>();
                 if (haveCommonElements(vehicleTypesList, workshopAllowedVehiclesList))
                     timeSlots.addAll(serverCommunicationController.routeGetRequestSending(urlXML, urlJSON, workshopName, endTime));
             }
