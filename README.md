@@ -17,4 +17,4 @@ The two artificial servers are from "https://github.com/Surmus/tire-change-works
      London tire workshop - http://localhost:9004/swagger/index.html
 3. Open tire-change-middleman as a Java Spring boot project.
 4. Run TireChangeMiddlemanApplication.java
-5. The application should be accessible from http://localhost:8080/interface.html
+5. The application should be accessible from http://localhost:8080/interface.html.
