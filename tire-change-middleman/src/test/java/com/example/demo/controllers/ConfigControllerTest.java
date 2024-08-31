@@ -15,7 +15,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class) // Enables Mockito annotations
+@ExtendWith(MockitoExtension.class)
 class ConfigControllerTest {
 
     @Mock
