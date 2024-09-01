@@ -75,6 +75,7 @@ form div {
     flex-direction: column;
     font-size: 15px;
     margin-inline: 20px;
+    padding-inline: auto;
 }
 
 #submit_booking,
@@ -209,11 +210,17 @@ footer {
     }
 
     select,
+    #maintenance_time,
     #submit_booking {
         width: 275px;
         height: 50px;
         font-size: 25px;
         border-radius: 5px;
+    }
+
+    #tire_replacement_book_form {
+        margin: auto;
+        width: 275px;
     }
 
     #submit_booking {
